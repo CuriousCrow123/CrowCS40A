@@ -1,0 +1,24 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import MipsEditor from '../../components/widgets/MipsEditor.svelte';
+---
+
+<BaseLayout title="Sandbox: MIPS Editor">
+  <main style="padding: var(--space-2xl); max-width: var(--figure-width); margin-inline: auto;">
+    <a href="/sandbox" style="color: var(--color-accent);">&larr; All widgets</a>
+    <h1 style="margin-block: var(--space-lg); font-size: 1.75rem;">MIPS Editor</h1>
+    <p style="color: var(--color-text-muted); margin-bottom: var(--space-xl);">
+      Interactive MIPS code viewer with line-by-line reveal and syntax highlighting.
+    </p>
+    <div style="background: var(--color-bg-raised); padding: var(--space-xl); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+      <MipsEditor client:load instanceId="sandbox-mips-editor" lines={[
+        { kind: 'visible', code: '.text' },
+        { kind: 'visible', code: 'NOR:' },
+        { kind: 'visible', code: '# Subprogram: NOR' },
+        { kind: 'hidden', code: '    nor   $v0, $a0, $a1' },
+        { kind: 'hidden', code: '    jr    $ra' },
+        { kind: 'blank', hint: 'What instruction goes here?' },
+      ]} title="Example: NOR Subprogram" />
+    </div>
+  </main>
+</BaseLayout>

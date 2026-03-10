@@ -1,0 +1,21 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TruthTable from '../../components/widgets/TruthTable.svelte';
+---
+
+<BaseLayout title="Sandbox: Truth Table">
+  <main style="padding: var(--space-2xl); max-width: var(--figure-width); margin-inline: auto;">
+    <a href="/sandbox" style="color: var(--color-accent);">&larr; All widgets</a>
+    <h1 style="margin-block: var(--space-lg); font-size: 1.75rem;">Truth Table</h1>
+    <p style="color: var(--color-text-muted); margin-bottom: var(--space-xl);">
+      Interactive truth table with revealable output columns.
+    </p>
+    <div style="background: var(--color-bg-raised); padding: var(--space-xl); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+      <TruthTable client:load instanceId="sandbox-truth-table" columns={[
+        { header: 'A', values: [0, 0, 1, 1] },
+        { header: 'B', values: [0, 1, 0, 1] },
+        { header: 'A NOR B', values: [1, 0, 0, 0] },
+      ]} revealColumns={[2]} />
+    </div>
+  </main>
+</BaseLayout>

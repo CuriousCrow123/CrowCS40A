@@ -1,0 +1,24 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import RegisterFile from '../../components/widgets/RegisterFile.svelte';
+---
+
+<BaseLayout title="Sandbox: Register File">
+  <main style="padding: var(--space-2xl); max-width: var(--figure-width); margin-inline: auto;">
+    <a href="/sandbox" style="color: var(--color-accent);">&larr; All widgets</a>
+    <h1 style="margin-block: var(--space-lg); font-size: 1.75rem;">Register File</h1>
+    <p style="color: var(--color-text-muted); margin-bottom: var(--space-xl);">
+      MIPS register state tracker with step-by-step execution trace.
+    </p>
+    <div style="background: var(--color-bg-raised); padding: var(--space-xl); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+      <RegisterFile client:load instanceId="sandbox-regfile" registers={['$a0', '$a1', '$v0', '$v1']} steps={[
+        { instruction: 'Initial', registers: { '$a0': 'A', '$a1': 'B', '$v0': '?', '$v1': '?' } },
+        { instruction: 'xor $a0, $a0, $a1', registers: { '$a0': 'A XOR B', '$a1': 'B', '$v0': '?', '$v1': '?' }, changed: ['$a0'], annotation: '$a0 now holds A XOR B' },
+        { instruction: 'xor $a1, $a0, $a1', registers: { '$a0': 'A XOR B', '$a1': 'A', '$v0': '?', '$v1': '?' }, changed: ['$a1'], annotation: 'Self-inverse: (A XOR B) XOR B = A' },
+        { instruction: 'xor $a0, $a0, $a1', registers: { '$a0': 'B', '$a1': 'A', '$v0': '?', '$v1': '?' }, changed: ['$a0'], annotation: 'Self-inverse: (A XOR B) XOR A = B' },
+        { instruction: 'move $v0, $a0', registers: { '$a0': 'B', '$a1': 'A', '$v0': 'B', '$v1': '?' }, changed: ['$v0'] },
+        { instruction: 'move $v1, $a1', registers: { '$a0': 'B', '$a1': 'A', '$v0': 'B', '$v1': 'A' }, changed: ['$v1'], annotation: 'Swap complete!' },
+      ]} />
+    </div>
+  </main>
+</BaseLayout>
