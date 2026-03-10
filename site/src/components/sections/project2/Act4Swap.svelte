@@ -231,7 +231,7 @@
       <button class="action" onclick={() => revealEdgeCase = !revealEdgeCase} aria-expanded={revealEdgeCase} disabled={!hydrated}>{revealEdgeCase ? 'Hide' : 'Reveal edge case trace'}</button>
     </p>
 
-    <h3 id="swap-return-registers">Moving to Return Registers</h3>
+    <h3 id="swap-output-registers">Output via $v0 and $v1</h3>
 
     <div class="callout">
       <strong>Assignment spec warning:</strong> The assignment text contains confusing notation.
@@ -261,7 +261,7 @@
       <button class="action" onclick={() => revealMapping = !revealMapping} aria-expanded={revealMapping} disabled={!hydrated}>{revealMapping ? 'Hide' : 'Reveal mapping'}</button>
     </p>
 
-    <h3 id="swap-modifying-args">Why Modifying $a0 and $a1 is OK</h3>
+    <h3 id="swap-side-effects">Side Effects Are OK</h3>
 
     <div class="question">
       <p>We changed <code>$a0</code> and <code>$a1</code>. Won't the caller be upset?</p>
@@ -280,7 +280,7 @@
       <button class="action" onclick={() => revealConvention = !revealConvention} aria-expanded={revealConvention} disabled={!hydrated}>{revealConvention ? 'Hide' : 'Reveal answer'}</button>
     </p>
 
-    <h3 id="swap-write-subprogram">Write the Complete Subprogram</h3>
+    <h3 id="swap-write-body">Write the Body</h3>
 
     <p>
       Try writing it yourself first. When you're ready, reveal the reference solution line by line:
