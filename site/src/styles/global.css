@@ -15,6 +15,7 @@
   --color-highlight: #f5a623;
   --color-success: #34d399;
   --color-error: #f87171;
+  --color-hex-addr: color-mix(in srgb, var(--color-accent) 65%, var(--color-text-muted));
 
   /* Typography */
   --font-body: 'Inter', system-ui, sans-serif;
@@ -133,6 +134,11 @@ button.action:focus-visible {
 .reveal > .reveal-inner {
   overflow: hidden;
 }
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    transition: none;
+  }
+}
 
 /* === Callout boxes for important notes, MARS notes, edge cases === */
 .callout {
@@ -153,6 +159,15 @@ button.action:focus-visible {
   border-left: 3px solid var(--color-highlight);
   padding: 0.75em 1em;
   margin-block: 1.5em;
+}
+
+/* === Hex address styling — accent tint + dotted underline for address values === */
+.hex-addr {
+  color: var(--color-hex-addr);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in srgb, var(--color-hex-addr) 50%, transparent);
 }
 
 /* === Screen-reader-only utility === */
