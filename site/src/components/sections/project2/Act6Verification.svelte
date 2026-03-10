@@ -90,7 +90,7 @@
 
 <section>
   <div class="prose">
-    <h2 id="act-6-verification">Act 6: Verification</h2>
+    <h2 id="section-6-testing">Section 6: Testing Your Code</h2>
 
     <p>
       You need a way to confirm your code works. The assignment says "other subprograms
@@ -109,12 +109,12 @@
   </Figure>
 
   <div class="prose">
-    <h3>Expected Output</h3>
+    <h3 id="expected-output">Expected Output</h3>
 
     <div class="callout">
       <strong>When you run this in MARS, you should see:</strong><br/>
       <code>NOR result:  0</code><br/>
-      <code>NAND result: 16777215</code> (which is 0x00FFFFFF)<br/>
+      <code>NAND result: 16777215</code> (which is <code>0x00FFFFFF</code>)<br/>
       <code>Mult4 result: 28</code><br/>
       <code>Swap $v0: 20</code><br/>
       <code>Swap $v1: 10</code>
@@ -127,7 +127,7 @@
       so <code>$ra</code> is never at risk of being overwritten.
     </div>
 
-    <h3>Peek Inside the Utility Subprograms</h3>
+    <h3 id="peek-inside-utilities">Peek Inside the Utility Subprograms</h3>
 
     <p>
       The test harness calls <code>PrintInt</code>, <code>PrintNewLine</code>, and
@@ -136,7 +136,7 @@
     </p>
 
     <p>
-      <button class="action" onclick={() => revealExit = true} disabled={!hydrated}>Peek inside Exit</button>
+      <button class="action" onclick={() => revealExit = !revealExit} aria-expanded={revealExit} disabled={!hydrated}>{revealExit ? 'Hide' : 'Peek inside Exit'}</button>
     </p>
     <div class="reveal" data-open={revealExit}>
       <div class="reveal-inner">
@@ -150,7 +150,7 @@
     </div>
 
     <p>
-      <button class="action" onclick={() => revealPrintInt = true} disabled={!hydrated}>Peek inside PrintInt</button>
+      <button class="action" onclick={() => revealPrintInt = !revealPrintInt} aria-expanded={revealPrintInt} disabled={!hydrated}>{revealPrintInt ? 'Hide' : 'Peek inside PrintInt'}</button>
     </p>
     <div class="reveal" data-open={revealPrintInt}>
       <div class="reveal-inner">
@@ -165,7 +165,7 @@
       </div>
     </div>
 
-    <h3>Final Reflection</h3>
+    <h3 id="final-reflection">Final Reflection</h3>
 
     <div class="question">
       <p>Which of the four subprograms taught you the most? Why?</p>
@@ -191,7 +191,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealReflection = true} disabled={!hydrated}>Reveal final summary</button>
+      <button class="action" onclick={() => revealReflection = !revealReflection} aria-expanded={revealReflection} disabled={!hydrated}>{revealReflection ? 'Hide' : 'Reveal final summary'}</button>
     </p>
   </div>
 </section>

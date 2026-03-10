@@ -20,13 +20,19 @@
     '    syscall',
   ];
 
+  const helloAddresses = [
+    '', '', '',
+    '0x00400000', '0x00400000', '0x00400004',
+    '0x00400008', '0x0040000C', '0x00400010',
+  ];
+
   const helloSteps: Step[] = [
-    { instruction: 'Initial state', line: 3, registers: { '$v0': '?', '$a0': '?' }, annotation: 'Program starts at main:' },
-    { instruction: 'li $v0, 4', line: 4, registers: { '$v0': '4', '$a0': '?' }, changed: ['$v0'], annotation: 'Service 4 = print string. Loaded into $v0.' },
-    { instruction: 'la $a0, msg', line: 5, registers: { '$v0': '4', '$a0': '0x10010000' }, changed: ['$a0'], annotation: 'Load the address of our "Hello!" string into $a0' },
-    { instruction: 'syscall', line: 6, registers: { '$v0': '4', '$a0': '0x10010000' }, reading: ['$v0', '$a0'], annotation: 'OS reads $v0 (service 4) and $a0 (string address) → prints "Hello!"' },
-    { instruction: 'li $v0, 10', line: 7, registers: { '$v0': '10', '$a0': '0x10010000' }, changed: ['$v0'], annotation: 'Service 10 = exit. Loaded into $v0.' },
-    { instruction: 'syscall', line: 8, registers: { '$v0': '10', '$a0': '0x10010000' }, reading: ['$v0'], annotation: 'OS reads $v0 (service 10) → program terminates' },
+    { instruction: 'Initial state', line: 3, registers: { '$v0': '?', '$a0': '?', '$pc': '0x00400000' }, annotation: 'Program starts at main: — $pc points to the first instruction' },
+    { instruction: 'li $v0, 4', line: 4, registers: { '$v0': '4', '$a0': '?', '$pc': '0x00400004' }, changed: ['$v0', '$pc'], annotation: 'Service 4 = print string. Loaded into $v0.' },
+    { instruction: 'la $a0, msg', line: 5, registers: { '$v0': '4', '$a0': '0x10010000', '$pc': '0x00400008' }, changed: ['$a0', '$pc'], annotation: 'Load the address of our "Hello!" string into $a0' },
+    { instruction: 'syscall', line: 6, registers: { '$v0': '4', '$a0': '0x10010000', '$pc': '0x0040000C' }, reading: ['$v0', '$a0'], changed: ['$pc'], annotation: 'OS reads $v0 (service 4) and $a0 (string address) → prints "Hello!"' },
+    { instruction: 'li $v0, 10', line: 7, registers: { '$v0': '10', '$a0': '0x10010000', '$pc': '0x00400010' }, changed: ['$v0', '$pc'], annotation: 'Service 10 = exit. Loaded into $v0.' },
+    { instruction: 'syscall', line: 8, registers: { '$v0': '10', '$a0': '0x10010000', '$pc': '0x00400010' }, reading: ['$v0'], annotation: 'OS reads $v0 (service 10) → program terminates' },
   ];
 </script>
 
@@ -41,7 +47,7 @@
       <code>$a0</code>–<code>$a1</code>. Then <code>syscall</code> does the work.
     </p>
 
-    <h3>The Syscall Protocol</h3>
+    <h3 id="syscall-protocol">The Syscall Protocol</h3>
 
     <ol class="syscall-steps">
       <li><strong>Load service number</strong> → <code>$v0</code></li>
@@ -49,7 +55,7 @@
       <li><strong>Execute <code>syscall</code></strong> → OS does the work</li>
     </ol>
 
-    <h3>The Five Services You Need</h3>
+    <h3 id="syscall-five-services">The Five Services You Need</h3>
   </div>
 
   <div class="service-grid">
@@ -85,7 +91,7 @@
   </div>
 
   <div class="prose">
-    <h3>Hello World Trace</h3>
+    <h3 id="syscall-hello-trace">Hello World Trace</h3>
 
     <p>
       Let's step through a complete Hello World program. Watch how each instruction sets up
@@ -98,9 +104,16 @@
       bind:this={tracer}
       instanceId="tracer-hello-syscall"
       code={helloCode}
-      registers={['$v0', '$a0']}
+      registers={['$v0', '$a0', '$pc']}
       steps={helloSteps}
       title="Hello World"
+      addresses={helloAddresses}
+      addressRegisterOverrides={{
+        2: ['$pc', '$ra', '$a0'],
+        3: ['$pc', '$ra', '$a0'],
+        4: ['$pc', '$ra', '$a0'],
+        5: ['$pc', '$ra', '$a0'],
+      }}
     />
   </Figure>
 
@@ -111,7 +124,7 @@
       has no idea whether you want to print, read, or exit.
     </div>
 
-    <h3>How <code>utils.asm</code> Uses Syscall</h3>
+    <h3 id="syscall-utils-asm">How <code>utils.asm</code> Uses Syscall</h3>
 
     <div class="callout">
       The <code>PrintInt</code>, <code>PrintString</code>, and <code>Exit</code> subprograms in
@@ -131,7 +144,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealExit = true} disabled={!hydrated}>Peek inside Exit</button>
+      <button class="action" onclick={() => revealExit = !revealExit} aria-expanded={revealExit} disabled={!hydrated}>{revealExit ? 'Hide' : 'Peek inside Exit'}</button>
     </p>
   </div>
 </section>

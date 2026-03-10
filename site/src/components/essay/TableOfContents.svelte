@@ -1,17 +1,25 @@
 <script lang="ts">
-  type TocEntry = { id: string; text: string };
+  type TocEntry = { id: string; text: string; children: TocEntry[] };
 
   let entries: TocEntry[] = $state([]);
   let activeId = $state('');
   let isOpen = $state(false);
 
   $effect(() => {
-    // Scan the DOM for h2[id] elements to build TOC
-    const headings = document.querySelectorAll('h2[id]');
-    entries = Array.from(headings).map((h) => ({
-      id: h.id,
-      text: h.textContent?.trim() ?? '',
-    }));
+    // Scan the DOM for h2[id] and h3[id] elements to build nested TOC
+    const headings = document.querySelectorAll('h2[id], h3[id]');
+    const tocEntries: TocEntry[] = [];
+    let current: TocEntry | null = null;
+
+    for (const h of headings) {
+      if (h.tagName === 'H2') {
+        current = { id: h.id, text: h.textContent?.trim() ?? '', children: [] };
+        tocEntries.push(current);
+      } else if (h.tagName === 'H3' && current) {
+        current.children.push({ id: h.id, text: h.textContent?.trim() ?? '', children: [] });
+      }
+    }
+    entries = tocEntries;
 
     // Track which section is currently visible
     const observer = new IntersectionObserver(
@@ -38,6 +46,10 @@
     if (window.innerWidth < 768) {
       isOpen = false;
     }
+  }
+
+  function isActiveParent(entry: TocEntry): boolean {
+    return entry.children.some((child) => child.id === activeId);
   }
 </script>
 
@@ -66,11 +78,26 @@
         <li>
           <button
             class="toc-link"
-            class:active={activeId === entry.id}
+            class:active={activeId === entry.id || isActiveParent(entry)}
             onclick={() => scrollTo(entry.id)}
           >
             {entry.text}
           </button>
+          {#if entry.children.length > 0}
+            <ol class="toc-sublist">
+              {#each entry.children as child}
+                <li>
+                  <button
+                    class="toc-link sub"
+                    class:active={activeId === child.id}
+                    onclick={() => scrollTo(child.id)}
+                  >
+                    {child.text}
+                  </button>
+                </li>
+              {/each}
+            </ol>
+          {/if}
         </li>
       {/each}
     </ol>
@@ -146,6 +173,15 @@
     gap: var(--space-xs);
   }
 
+  .toc-sublist {
+    list-style: none;
+    padding-left: var(--space-md, 1rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 0;
+  }
+
   .toc-link {
     all: unset;
     display: block;
@@ -160,14 +196,28 @@
       background var(--transition-fast);
   }
 
+  .toc-link.sub {
+    font-size: 0.8rem;
+    padding: 2px var(--space-sm);
+    opacity: 0.75;
+  }
+
   .toc-link:hover {
     color: var(--color-text);
     background: var(--color-bg-surface);
   }
 
+  .toc-link.sub:hover {
+    opacity: 1;
+  }
+
   .toc-link.active {
     color: var(--color-accent);
     background: var(--color-bg-surface);
+  }
+
+  .toc-link.sub.active {
+    opacity: 1;
   }
 
   .toc-link:focus-visible {

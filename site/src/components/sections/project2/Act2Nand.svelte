@@ -3,12 +3,14 @@
   import MipsEditor from '../../widgets/MipsEditor.svelte';
   import TruthTable from '../../widgets/TruthTable.svelte';
   import ExecutionTracer from '../../widgets/ExecutionTracer.svelte';
-  import type { Line, Column, Step } from '../../../lib/types';
+  import SubprogramAnimator from '../../widgets/SubprogramAnimator.svelte';
+  import type { Line, Column, Step, RegisterBinding } from '../../../lib/types';
 
   let truthTable = $state<ReturnType<typeof TruthTable>>();
   let completionEditor = $state<ReturnType<typeof MipsEditor>>();
   let norCompareEditor = $state<ReturnType<typeof MipsEditor>>();
   let nandCompareEditor = $state<ReturnType<typeof MipsEditor>>();
+  let animator = $state<ReturnType<typeof SubprogramAnimator>>();
 
   let hydrated = $state(false);
   $effect(() => { hydrated = true; });
@@ -19,24 +21,35 @@
   let revealComparison = $state(false);
 
   const nandCode = [
-    '.text',
+    '# --- main (caller) ---',
+    'main:',
+    '    li    $a0, 0xFF00FF00',
+    '    li    $a1, 0xFFFF0000',
+    '    jal   NAND',
+    '    move  $t0, $v0',
+    '',
+    '# --- NAND (subprogram) ---',
     'NAND:',
-    '# Subprogram:   NAND',
-    '# Author:       [student name]',
-    '# Purpose:      Performs bitwise NAND on two values',
-    '# Input:        $a0 = first value, $a1 = second value',
-    '# Output:       $v0 = $a0 NAND $a1',
-    '# Side effects: none',
     '    and   $v0, $a0, $a1',
     '    not   $v0, $v0',
     '    jr    $ra',
   ];
 
+  const nandAddresses = [
+    '0x00400000', '0x00400000', '0x00400004', '0x00400008',
+    '0x0040000C', '0x00400010', '',
+    '0x00400014', '0x00400014', '0x00400018', '0x0040001C', '0x00400020',
+  ];
+
   const nandSteps: Step[] = [
-    { instruction: 'Initial state', line: 0, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '?' }, annotation: 'Arguments loaded by caller' },
-    { instruction: 'and $v0, $a0, $a1', line: 8, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0xFF000000' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'Step 1: AND the inputs — intermediate result in $v0' },
-    { instruction: 'not $v0, $v0', line: 9, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0x00FFFFFF' }, reading: ['$v0'], changed: ['$v0'], annotation: 'Step 2: NOT the intermediate — $v0 is both source AND destination!' },
-    { instruction: 'jr $ra', line: 10, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0x00FFFFFF' }, annotation: 'Return with NAND result in $v0' },
+    { instruction: 'Initial state', line: 1, registers: { '$a0': '?', '$a1': '?', '$v0': '?', '$ra': '?', '$pc': '0x00400000' }, annotation: 'Program starts at main' },
+    { instruction: 'li $a0, 0xFF00FF00', line: 2, registers: { '$a0': '0xFF00FF00', '$a1': '?', '$v0': '?', '$ra': '?', '$pc': '0x00400004' }, changed: ['$a0', '$pc'], annotation: 'Load first argument into $a0' },
+    { instruction: 'li $a1, 0xFFFF0000', line: 3, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '?', '$ra': '?', '$pc': '0x00400008' }, changed: ['$a1', '$pc'], annotation: 'Load second argument into $a1' },
+    { instruction: 'jal NAND', line: 4, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '?', '$ra': '0x00400010', '$pc': '0x00400018' }, changed: ['$ra', '$pc'], annotation: 'jal saves return address (0x00400010) in $ra, jumps to NAND (0x00400018)' },
+    { instruction: 'and $v0, $a0, $a1', line: 9, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0xFF000000', '$ra': '0x00400010', '$pc': '0x0040001C' }, reading: ['$a0', '$a1'], changed: ['$v0', '$pc'], annotation: 'Step 1: AND the inputs — intermediate result in $v0' },
+    { instruction: 'not $v0, $v0', line: 10, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0x00FFFFFF', '$ra': '0x00400010', '$pc': '0x00400020' }, reading: ['$v0'], changed: ['$v0', '$pc'], annotation: 'Step 2: NOT the intermediate — $v0 is both source AND destination!' },
+    { instruction: 'jr $ra', line: 11, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0x00FFFFFF', '$ra': '0x00400010', '$pc': '0x00400010' }, reading: ['$ra'], changed: ['$pc'], annotation: 'jr copies $ra (0x00400010) into $pc — back to caller' },
+    { instruction: 'move $t0, $v0', line: 5, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0x00FFFFFF', '$ra': '0x00400010', '$pc': '0x00400014' }, changed: ['$pc'], annotation: 'Back in main! Caller saves NAND result — call/return complete' },
   ];
 
   const nandColumns: Column[] = [
@@ -72,18 +85,26 @@
     { kind: 'visible', code: '    not   $v0, $v0', comment: 'Step 2: NOT (2 instructions)' },
     { kind: 'visible', code: '    jr    $ra' },
   ];
+
+  const nandInputs: RegisterBinding[] = [
+    { register: '$a0', value: '0xFF00FF00' },
+    { register: '$a1', value: '0xFFFF0000' },
+  ];
+  const nandOutputs: RegisterBinding[] = [
+    { register: '$v0', value: '0x00FFFFFF' },
+  ];
 </script>
 
 <section>
   <div class="prose">
-    <h2 id="act-2-nand">Act 2: NAND — Completion Problem</h2>
+    <h2 id="section-2-nand">Section 2: NAND — Completion Problem</h2>
 
     <p>
       NOR had a hardware instruction. Let's see if NAND does too.
       This time, you'll <strong>complete</strong> a partially-written subprogram.
     </p>
 
-    <h3>Pattern Recognition</h3>
+    <h3 id="nand-from-nor">From NOR to NAND</h3>
 
     <div class="question">
       <p>NAND is to AND what NOR is to OR. Based on how we wrote NOR, what's your first instinct for NAND?</p>
@@ -101,10 +122,10 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealPattern = true} disabled={!hydrated}>Reveal what happens</button>
+      <button class="action" onclick={() => revealPattern = !revealPattern} aria-expanded={revealPattern} disabled={!hydrated}>{revealPattern ? 'Hide' : 'Reveal what happens'}</button>
     </p>
 
-    <h3>NAND Truth Table</h3>
+    <h3 id="nand-truth-table">NAND Truth Table</h3>
 
     <div class="question">
       <p>Fill in NAND. Express it as a composition of operations you already know.</p>
@@ -112,7 +133,7 @@
 
     <p>
       Think first, then
-      <button class="action" onclick={() => truthTable?.reveal()} disabled={!truthTable}>reveal the NAND column</button>.
+      <button class="action" onclick={() => truthTable?.reveal()} disabled={!truthTable}>reveal the NAND column</button> (<button class="action" onclick={() => truthTable?.reset()} aria-label="Reset NAND truth table" disabled={!truthTable}>reset</button>).
     </p>
   </div>
 
@@ -121,7 +142,7 @@
   </Figure>
 
   <div class="prose">
-    <h3>Complete the Subprogram</h3>
+    <h3 id="nand-fill-step-2">Fill In Step 2</h3>
 
     <p>
       You're given the scaffold and Step 1 (<code>and</code>). The blank slot is yours to fill.
@@ -149,7 +170,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealComplete = true} disabled={!hydrated}>Reveal Step 2</button>
+      <button class="action" onclick={() => revealComplete = !revealComplete} aria-expanded={revealComplete} disabled={!hydrated}>{revealComplete ? 'Hide' : 'Reveal Step 2'}</button>
     </p>
 
     <div class="reveal" data-open={revealMars}>
@@ -162,13 +183,29 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealMars = true} disabled={!hydrated}>What does MARS show?</button>
+      <button class="action" onclick={() => revealMars = !revealMars} aria-expanded={revealMars} disabled={!hydrated}>{revealMars ? 'Hide' : 'What does MARS show?'}</button>
     </p>
 
-    <h3>Execution Trace</h3>
+    <h3 id="nand-black-box">Black-Box View</h3>
+
     <p>
-      NAND requires TWO instructions. Step through to see how they chain together.
-      Pay special attention to Step 2 — <code>$v0</code> is both source and destination.
+      See NAND as a "black box" — same register contract as NOR, different operation inside.
+      <button class="action" onclick={() => animator?.animate()} disabled={!animator}>Animate the data flow</button>
+      (<button class="action" onclick={() => animator?.reset()} aria-label="Reset NAND animation" disabled={!animator}>reset</button>).
+    </p>
+  </div>
+
+  <Figure caption="NAND as a black box — $a0 and $a1 go in, $v0 comes out">
+    <SubprogramAnimator bind:this={animator} instanceId="subprog-nand" inputs={nandInputs} outputs={nandOutputs} operation="NAND" />
+  </Figure>
+
+  <div class="prose">
+    <h3 id="nand-execution-trace">Execution Trace</h3>
+    <p>
+      This trace shows the <strong>complete program</strong>: <code>main</code> loads arguments,
+      calls NAND with <code>jal</code>, and receives the result. Watch <code>$ra</code> and
+      <code>$pc</code> through the call/return, and pay attention to Step 2 where <code>$v0</code>
+      is both source and destination.
     </p>
   </div>
 
@@ -176,14 +213,15 @@
     <ExecutionTracer
       instanceId="tracer-nand"
       code={nandCode}
-      registers={['$a0', '$a1', '$v0']}
+      registers={['$a0', '$a1', '$v0', '$ra', '$pc']}
       steps={nandSteps}
-      title="NAND Subprogram"
+      title="NAND — Full Call & Return"
+      addresses={nandAddresses}
     />
   </Figure>
 
   <div class="prose">
-    <h3>Cross-Subprogram Comparison</h3>
+    <h3 id="nand-vs-nor">NOR vs. NAND</h3>
 
     <div class="question">
       <p>Compare NOR and NAND side by side. What's structurally identical? What's different?</p>
@@ -210,7 +248,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealComparison = true} disabled={!hydrated}>Reveal comparison insight</button>
+      <button class="action" onclick={() => revealComparison = !revealComparison} aria-expanded={revealComparison} disabled={!hydrated}>{revealComparison ? 'Hide' : 'Reveal comparison insight'}</button>
     </p>
   </div>
 </section>

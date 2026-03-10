@@ -4,11 +4,13 @@
   import TruthTable from '../../widgets/TruthTable.svelte';
   import BitOperator from '../../widgets/BitOperator.svelte';
   import ExecutionTracer from '../../widgets/ExecutionTracer.svelte';
-  import type { Line, Column, Step } from '../../../lib/types';
+  import SubprogramAnimator from '../../widgets/SubprogramAnimator.svelte';
+  import type { Line, Column, Step, RegisterBinding } from '../../../lib/types';
 
   let truthTable = $state<ReturnType<typeof TruthTable>>();
   let bitOp = $state<ReturnType<typeof BitOperator>>();
   let codeEditor = $state<ReturnType<typeof MipsEditor>>();
+  let animator = $state<ReturnType<typeof SubprogramAnimator>>();
 
   let hydrated = $state(false);
   $effect(() => { hydrated = true; });
@@ -28,14 +30,16 @@
   ];
 
   const swapCode = [
-    '.text',
+    '# --- main (caller) ---',
+    'main:',
+    '    li    $a0, 42',
+    '    li    $a1, 99',
+    '    jal   Swap',
+    '    move  $t0, $v0',
+    '    move  $t1, $v1',
+    '',
+    '# --- Swap (subprogram) ---',
     'Swap:',
-    '# Subprogram:   Swap',
-    '# Author:       [student name]',
-    '# Purpose:      Swaps two values using XOR and MOVE',
-    '# Input:        $a0 = first value, $a1 = second value',
-    '# Output:       $v0 = original $a1, $v1 = original $a0',
-    '# Side effects: $a0 and $a1 are modified',
     '    xor   $a0, $a0, $a1',
     '    xor   $a1, $a0, $a1',
     '    xor   $a0, $a0, $a1',
@@ -44,13 +48,25 @@
     '    jr    $ra',
   ];
 
+  const swapAddresses = [
+    '0x00400000', '0x00400000', '0x00400004', '0x00400008',
+    '0x0040000C', '0x00400010', '0x00400014', '',
+    '0x00400018', '0x00400018', '0x0040001C', '0x00400020',
+    '0x00400024', '0x00400028', '0x0040002C', '0x00400030',
+  ];
+
   const swapSteps: Step[] = [
-    { instruction: 'Initial', line: 0, registers: { '$a0': 'A', '$a1': 'B', '$v0': '?', '$v1': '?' }, annotation: 'Starting values: $a0 = A, $a1 = B' },
-    { instruction: 'xor $a0, $a0, $a1', line: 8, registers: { '$a0': 'A XOR B', '$a1': 'B', '$v0': '?', '$v1': '?' }, reading: ['$a0', '$a1'], changed: ['$a0'], annotation: '$a0 now holds A XOR B — the original A is "encoded" with B' },
-    { instruction: 'xor $a1, $a0, $a1', line: 9, registers: { '$a0': 'A XOR B', '$a1': 'A', '$v0': '?', '$v1': '?' }, reading: ['$a0', '$a1'], changed: ['$a1'], annotation: 'Self-inverse: (A XOR B) XOR B = A — original A recovered in $a1!' },
-    { instruction: 'xor $a0, $a0, $a1', line: 10, registers: { '$a0': 'B', '$a1': 'A', '$v0': '?', '$v1': '?' }, reading: ['$a0', '$a1'], changed: ['$a0'], annotation: 'Self-inverse: (A XOR B) XOR A = B — original B now in $a0' },
-    { instruction: 'move $v0, $a0', line: 11, registers: { '$a0': 'B', '$a1': 'A', '$v0': 'B', '$v1': '?' }, reading: ['$a0'], changed: ['$v0'], annotation: '$v0 = B (original $a1) — first output register set' },
-    { instruction: 'move $v1, $a1', line: 12, registers: { '$a0': 'B', '$a1': 'A', '$v0': 'B', '$v1': 'A' }, reading: ['$a1'], changed: ['$v1'], annotation: 'Swap complete! $v0 = B, $v1 = A — both outputs set' },
+    { instruction: 'Initial state', line: 1, registers: { '$a0': '?', '$a1': '?', '$v0': '?', '$v1': '?', '$ra': '?', '$pc': '0x00400000' }, annotation: 'Program starts at main' },
+    { instruction: 'li $a0, 42', line: 2, registers: { '$a0': '42', '$a1': '?', '$v0': '?', '$v1': '?', '$ra': '?', '$pc': '0x00400004' }, changed: ['$a0', '$pc'], annotation: 'Load first value (A = 42) into $a0' },
+    { instruction: 'li $a1, 99', line: 3, registers: { '$a0': '42', '$a1': '99', '$v0': '?', '$v1': '?', '$ra': '?', '$pc': '0x00400008' }, changed: ['$a1', '$pc'], annotation: 'Load second value (B = 99) into $a1' },
+    { instruction: 'jal Swap', line: 4, registers: { '$a0': '42', '$a1': '99', '$v0': '?', '$v1': '?', '$ra': '0x00400010', '$pc': '0x0040001C' }, changed: ['$ra', '$pc'], annotation: 'jal saves return address (0x00400010) in $ra, jumps to Swap (0x0040001C)' },
+    { instruction: 'xor $a0, $a0, $a1', line: 10, registers: { '$a0': '42 XOR 99', '$a1': '99', '$v0': '?', '$v1': '?', '$ra': '0x00400010', '$pc': '0x00400020' }, reading: ['$a0', '$a1'], changed: ['$a0', '$pc'], annotation: '$a0 now holds A XOR B — the original A is "encoded" with B' },
+    { instruction: 'xor $a1, $a0, $a1', line: 11, registers: { '$a0': '42 XOR 99', '$a1': '42', '$v0': '?', '$v1': '?', '$ra': '0x00400010', '$pc': '0x00400024' }, reading: ['$a0', '$a1'], changed: ['$a1', '$pc'], annotation: 'Self-inverse: (A XOR B) XOR B = A — original 42 recovered in $a1!' },
+    { instruction: 'xor $a0, $a0, $a1', line: 12, registers: { '$a0': '99', '$a1': '42', '$v0': '?', '$v1': '?', '$ra': '0x00400010', '$pc': '0x00400028' }, reading: ['$a0', '$a1'], changed: ['$a0', '$pc'], annotation: 'Self-inverse: (A XOR B) XOR A = B — original 99 now in $a0' },
+    { instruction: 'move $v0, $a0', line: 13, registers: { '$a0': '99', '$a1': '42', '$v0': '99', '$v1': '?', '$ra': '0x00400010', '$pc': '0x0040002C' }, reading: ['$a0'], changed: ['$v0', '$pc'], annotation: '$v0 = 99 (original $a1) — first output register set' },
+    { instruction: 'move $v1, $a1', line: 14, registers: { '$a0': '99', '$a1': '42', '$v0': '99', '$v1': '42', '$ra': '0x00400010', '$pc': '0x00400030' }, reading: ['$a1'], changed: ['$v1', '$pc'], annotation: 'Both outputs set: $v0 = 99 (was $a1), $v1 = 42 (was $a0)' },
+    { instruction: 'jr $ra', line: 15, registers: { '$a0': '99', '$a1': '42', '$v0': '99', '$v1': '42', '$ra': '0x00400010', '$pc': '0x00400010' }, reading: ['$ra'], changed: ['$pc'], annotation: 'jr copies $ra (0x00400010) into $pc — back to caller' },
+    { instruction: 'move $t0, $v0', line: 5, registers: { '$a0': '99', '$a1': '42', '$v0': '99', '$v1': '42', '$ra': '0x00400010', '$pc': '0x00400014' }, changed: ['$pc'], annotation: 'Back in main! Caller saves swapped values — call/return complete' },
   ];
 
   const swapLines: Line[] = [
@@ -69,11 +85,20 @@
     { kind: 'hidden', code: '    move  $v1, $a1', comment: '$v1 = A (original $a0)' },
     { kind: 'visible', code: '    jr    $ra' },
   ];
+
+  const swapInputs: RegisterBinding[] = [
+    { register: '$a0', value: '42' },
+    { register: '$a1', value: '99' },
+  ];
+  const swapOutputs: RegisterBinding[] = [
+    { register: '$v0', value: '99' },
+    { register: '$v1', value: '42' },
+  ];
 </script>
 
 <section>
   <div class="prose">
-    <h2 id="act-4-swap">Act 4: Swap — Independent Problem</h2>
+    <h2 id="section-4-swap">Section 4: Swap — Independent Problem</h2>
 
     <p>
       This is the most conceptually dense subprogram. You'll write <strong>everything from scratch</strong>,
@@ -81,15 +106,15 @@
       of XOR (self-inverse), not just its truth table.
     </p>
 
-    <h3>Recall: XOR Truth Table</h3>
+    <h3 id="xor-truth-table">XOR Truth Table</h3>
 
     <div class="question">
       <p>Compute 1010 XOR 1100, bit by bit. XOR outputs 1 when the inputs <em>differ</em>.</p>
     </div>
 
     <p>
-      <button class="action" onclick={() => truthTable?.reveal()} disabled={!truthTable}>Show XOR column</button>, then
-      <button class="action" onclick={() => bitOp?.animate()} disabled={!bitOp}>animate the bitwise operation</button>.
+      <button class="action" onclick={() => truthTable?.reveal()} disabled={!truthTable}>Show XOR column</button> (<button class="action" onclick={() => truthTable?.reset()} aria-label="Reset XOR truth table" disabled={!truthTable}>reset</button>), then
+      <button class="action" onclick={() => bitOp?.animate()} disabled={!bitOp}>animate the bitwise operation</button> (<button class="action" onclick={() => bitOp?.reset()} aria-label="Reset bitwise XOR operation" disabled={!bitOp}>reset</button>).
     </p>
   </div>
 
@@ -102,7 +127,7 @@
   </Figure>
 
   <div class="prose">
-    <h3>Discover the Self-Inverse Property</h3>
+    <h3 id="swap-self-inverse">The Self-Inverse Property</h3>
 
     <div class="question">
       <p>
@@ -121,10 +146,10 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealSelfInverse = true} disabled={!hydrated}>Reveal the property</button>
+      <button class="action" onclick={() => revealSelfInverse = !revealSelfInverse} aria-expanded={revealSelfInverse} disabled={!hydrated}>{revealSelfInverse ? 'Hide' : 'Reveal the property'}</button>
     </p>
 
-    <h3>The Challenge</h3>
+    <h3 id="swap-no-temp">The Challenge: No Temp Register</h3>
 
     <div class="question">
       <p>
@@ -145,13 +170,30 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealChallenge = true} disabled={!hydrated}>I'm stuck — show me the approach</button>
+      <button class="action" onclick={() => revealChallenge = !revealChallenge} aria-expanded={revealChallenge} disabled={!hydrated}>{revealChallenge ? 'Hide' : "I'm stuck — show me the approach"}</button>
     </p>
 
-    <h3>The Swap Algorithm Trace</h3>
+    <h3 id="swap-black-box">Black-Box View</h3>
 
     <p>
-      Step through the XOR swap. Watch how the self-inverse property makes each step work.
+      Swap is the most complex subprogram — two inputs, two outputs. See it as a black box first.
+      <button class="action" onclick={() => animator?.animate()} disabled={!animator}>Animate the data flow</button>
+      (<button class="action" onclick={() => animator?.reset()} aria-label="Reset Swap animation" disabled={!animator}>reset</button>).
+    </p>
+  </div>
+
+  <Figure caption="Swap as a black box — $a0 and $a1 go in, their values come out swapped in $v0 and $v1">
+    <SubprogramAnimator bind:this={animator} instanceId="subprog-swap" inputs={swapInputs} outputs={swapOutputs} operation="XOR Swap" />
+  </Figure>
+
+  <div class="prose">
+    <h3 id="swap-execution-trace">Execution Trace</h3>
+
+    <p>
+      This trace shows the <strong>complete program</strong>: <code>main</code> loads two concrete
+      values (42 and 99), calls Swap with <code>jal</code>, and receives them back swapped.
+      Watch <code>$ra</code> and <code>$pc</code> through the call/return, and see how the
+      self-inverse property makes each XOR step work.
     </p>
   </div>
 
@@ -159,14 +201,15 @@
     <ExecutionTracer
       instanceId="tracer-swap"
       code={swapCode}
-      registers={['$a0', '$a1', '$v0', '$v1']}
+      registers={['$a0', '$a1', '$v0', '$v1', '$ra', '$pc']}
       steps={swapSteps}
-      title="Swap Subprogram"
+      title="Swap — Full Call & Return"
+      addresses={swapAddresses}
     />
   </Figure>
 
   <div class="prose">
-    <h3>Edge Case: What if $a0 = $a1?</h3>
+    <h3 id="swap-equal-inputs">Edge Case: Equal Inputs</h3>
 
     <div class="question">
       <p>Trace through with both equal to A. Does it still work?</p>
@@ -185,10 +228,10 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealEdgeCase = true} disabled={!hydrated}>Reveal edge case trace</button>
+      <button class="action" onclick={() => revealEdgeCase = !revealEdgeCase} aria-expanded={revealEdgeCase} disabled={!hydrated}>{revealEdgeCase ? 'Hide' : 'Reveal edge case trace'}</button>
     </p>
 
-    <h3>Moving to Return Registers</h3>
+    <h3 id="swap-return-registers">Moving to Return Registers</h3>
 
     <div class="callout">
       <strong>Assignment spec warning:</strong> The assignment text contains confusing notation.
@@ -215,10 +258,10 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealMapping = true} disabled={!hydrated}>Reveal mapping</button>
+      <button class="action" onclick={() => revealMapping = !revealMapping} aria-expanded={revealMapping} disabled={!hydrated}>{revealMapping ? 'Hide' : 'Reveal mapping'}</button>
     </p>
 
-    <h3>Why Modifying $a0 and $a1 is OK</h3>
+    <h3 id="swap-modifying-args">Why Modifying $a0 and $a1 is OK</h3>
 
     <div class="question">
       <p>We changed <code>$a0</code> and <code>$a1</code>. Won't the caller be upset?</p>
@@ -234,14 +277,14 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealConvention = true} disabled={!hydrated}>Reveal answer</button>
+      <button class="action" onclick={() => revealConvention = !revealConvention} aria-expanded={revealConvention} disabled={!hydrated}>{revealConvention ? 'Hide' : 'Reveal answer'}</button>
     </p>
 
-    <h3>Write the Complete Subprogram</h3>
+    <h3 id="swap-write-subprogram">Write the Complete Subprogram</h3>
 
     <p>
       Try writing it yourself first. When you're ready, reveal the reference solution line by line:
-      <button class="action" onclick={() => codeEditor?.revealAll()} disabled={!codeEditor}>Reveal all lines</button>
+      <button class="action" onclick={() => codeEditor?.revealAll()} disabled={!codeEditor}>Reveal all lines</button> (<button class="action" onclick={() => codeEditor?.reset()} aria-label="Reset code editor" disabled={!codeEditor}>reset</button>)
     </p>
   </div>
 
@@ -250,7 +293,7 @@
   </Figure>
 
   <div class="prose">
-    <h3>Honesty About XOR Swap</h3>
+    <h3 id="swap-honesty">Honesty About XOR Swap</h3>
 
     <div class="question">
       <p>Could we skip the XOR and just do <code>move $v0, $a1</code> / <code>move $v1, $a0</code> to achieve the same result?</p>
@@ -268,10 +311,10 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealHonesty = true} disabled={!hydrated}>Reveal the honest answer</button>
+      <button class="action" onclick={() => revealHonesty = !revealHonesty} aria-expanded={revealHonesty} disabled={!hydrated}>{revealHonesty ? 'Hide' : 'Reveal the honest answer'}</button>
     </p>
 
-    <h3>Narrative Bookend</h3>
+    <h3 id="swap-bookend">Narrative Bookend</h3>
 
     <div class="question">
       <p>Which of the four subprograms taught you the most? Why?</p>
@@ -286,7 +329,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealBookend = true} disabled={!hydrated}>Reflect</button>
+      <button class="action" onclick={() => revealBookend = !revealBookend} aria-expanded={revealBookend} disabled={!hydrated}>{revealBookend ? 'Hide' : 'Reflect'}</button>
     </p>
   </div>
 </section>

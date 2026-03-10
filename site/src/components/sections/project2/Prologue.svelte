@@ -16,7 +16,7 @@
     </p>
 
     <!-- ── 2a. Registers Are Named Boxes ── -->
-    <h3>Registers Are Named Boxes</h3>
+    <h3 id="registers-are-named-boxes">Registers Are Named Boxes</h3>
 
     <p>
       The CPU has 32 general-purpose registers — tiny, blazing-fast storage slots
@@ -70,7 +70,7 @@
     <p class="muted">...and 22 more. You'll meet them when you need them.</p>
 
     <!-- ── 2b. Addresses Are Just Numbers ── -->
-    <h3>Addresses Are Just Numbers</h3>
+    <h3 id="addresses-are-just-numbers">Addresses Are Just Numbers</h3>
 
     <p>
       Your program lives in memory. Each instruction has a fixed address, like a
@@ -87,19 +87,19 @@
         </thead>
         <tbody>
           <tr>
-            <td><code>0x00400000</code></td>
+            <td><code class="hex-addr">0x00400000</code></td>
             <td><code>li &nbsp;$a0, 10</code></td>
           </tr>
           <tr>
-            <td><code>0x00400004</code></td>
+            <td><code class="hex-addr">0x00400004</code></td>
             <td><code>li &nbsp;$a1, 20</code></td>
           </tr>
           <tr>
-            <td><code>0x00400008</code></td>
+            <td><code class="hex-addr">0x00400008</code></td>
             <td><code>jal NOR</code></td>
           </tr>
           <tr>
-            <td><code>0x0040000C</code></td>
+            <td><code class="hex-addr">0x0040000C</code></td>
             <td><code>move $t0, $v0</code></td>
           </tr>
         </tbody>
@@ -114,13 +114,13 @@
     </div>
 
     <div class="callout">
-      <strong>Hex addresses:</strong> <code>0x00400008</code> means the third instruction —
-      addresses start at <code>0x00400000</code> and count up by 4.
+      <strong>Hex addresses:</strong> <code class="hex-addr">0x00400008</code> means the third instruction —
+      addresses start at <code class="hex-addr">0x00400000</code> and count up by 4.
       The <code>0x</code> prefix just means "this number is in hexadecimal."
     </div>
 
     <!-- ── 2c. Real vs. Pseudo-Instructions ── -->
-    <h3>Real vs. Pseudo-Instructions</h3>
+    <h3 id="real-vs-pseudo-instructions">Real vs. Pseudo-Instructions</h3>
 
     <div class="callout">
       <strong>Good to know:</strong> MIPS has ~60 real hardware instructions. The assembler
@@ -131,7 +131,7 @@
     </div>
 
     <!-- ── 2d. Instruction Format ── -->
-    <h3>Instruction Format: rd, rs, rt</h3>
+    <h3 id="instruction-format">Instruction Format: rd, rs, rt</h3>
 
     <p>
       Most arithmetic/logic MIPS instructions follow a three-register pattern:
@@ -168,7 +168,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealFormat = true} disabled={!hydrated}>Reveal answer</button>
+      <button class="action" onclick={() => revealFormat = !revealFormat} aria-expanded={revealFormat} disabled={!hydrated}>{revealFormat ? 'Hide' : 'Reveal answer'}</button>
     </p>
 
     <p>

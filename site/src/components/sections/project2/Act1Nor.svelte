@@ -4,11 +4,13 @@
   import TruthTable from '../../widgets/TruthTable.svelte';
   import BitOperator from '../../widgets/BitOperator.svelte';
   import ExecutionTracer from '../../widgets/ExecutionTracer.svelte';
-  import type { Line, Column, Step } from '../../../lib/types';
+  import SubprogramAnimator from '../../widgets/SubprogramAnimator.svelte';
+  import type { Line, Column, Step, RegisterBinding } from '../../../lib/types';
 
   let truthTable = $state<ReturnType<typeof TruthTable>>();
   let bitOp = $state<ReturnType<typeof BitOperator>>();
   let codeEditor = $state<ReturnType<typeof MipsEditor>>();
+  let animator = $state<ReturnType<typeof SubprogramAnimator>>();
 
   let hydrated = $state(false);
   $effect(() => { hydrated = true; });
@@ -25,22 +27,41 @@
   ];
 
   const norCode = [
-    '.text',
+    '# --- main (caller) ---',
+    'main:',
+    '    li    $a0, 0xF0F0F0F0',
+    '    li    $a1, 0x0F0F0F0F',
+    '    jal   NOR',
+    '    move  $t0, $v0',
+    '',
+    '# --- NOR (subprogram) ---',
     'NOR:',
-    '# Subprogram:   NOR',
-    '# Author:       [student name]',
-    '# Purpose:      Performs bitwise NOR on two values',
-    '# Input:        $a0 = first value, $a1 = second value',
-    '# Output:       $v0 = $a0 NOR $a1',
-    '# Side effects: none',
     '    nor   $v0, $a0, $a1',
     '    jr    $ra',
   ];
 
+  const norAddresses = [
+    '0x00400000', '0x00400000', '0x00400004', '0x00400008',
+    '0x0040000C', '0x00400010', '',
+    '0x00400014', '0x00400014', '0x00400018', '0x0040001C',
+  ];
+
   const norSteps: Step[] = [
-    { instruction: 'Initial state', line: 0, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?' }, annotation: 'Caller loaded arguments into $a0 and $a1' },
-    { instruction: 'nor $v0, $a0, $a1', line: 8, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'nor rd, rs, rt — read $a0 (rs) and $a1 (rt), NOR all 32 bits, write result to $v0 (rd)' },
-    { instruction: 'jr $ra', line: 9, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000' }, annotation: 'Return to caller — result is in $v0' },
+    { instruction: 'Initial state', line: 1, registers: { '$a0': '?', '$a1': '?', '$v0': '?', '$ra': '?', '$pc': '0x00400000' }, annotation: 'Program starts at main — no arguments loaded yet' },
+    { instruction: 'li $a0, 0xF0F0F0F0', line: 2, registers: { '$a0': '0xF0F0F0F0', '$a1': '?', '$v0': '?', '$ra': '?', '$pc': '0x00400004' }, changed: ['$a0', '$pc'], annotation: 'Load first argument into $a0' },
+    { instruction: 'li $a1, 0x0F0F0F0F', line: 3, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?', '$ra': '?', '$pc': '0x00400008' }, changed: ['$a1', '$pc'], annotation: 'Load second argument into $a1' },
+    { instruction: 'jal NOR', line: 4, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?', '$ra': '0x00400010', '$pc': '0x00400018' }, changed: ['$ra', '$pc'], annotation: 'jal saves next address (0x00400010) in $ra, then jumps to NOR (0x00400018)' },
+    { instruction: 'nor $v0, $a0, $a1', line: 9, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000', '$ra': '0x00400010', '$pc': '0x0040001C' }, reading: ['$a0', '$a1'], changed: ['$v0', '$pc'], annotation: 'nor rd, rs, rt — read $a0 (rs) and $a1 (rt), NOR all 32 bits, write to $v0 (rd)' },
+    { instruction: 'jr $ra', line: 10, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000', '$ra': '0x00400010', '$pc': '0x00400010' }, reading: ['$ra'], changed: ['$pc'], annotation: 'jr copies $ra (0x00400010) into $pc — execution jumps back to caller' },
+    { instruction: 'move $t0, $v0', line: 5, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000', '$ra': '0x00400010', '$pc': '0x00400014' }, changed: ['$pc'], annotation: 'Back in main! Caller saves result from $v0 — the call/return dance is complete' },
+  ];
+
+  const norInputs: RegisterBinding[] = [
+    { register: '$a0', value: '0xF0F0F0F0' },
+    { register: '$a1', value: '0x0F0F0F0F' },
+  ];
+  const norOutputs: RegisterBinding[] = [
+    { register: '$v0', value: '0x00000000' },
   ];
 
   const norLines: Line[] = [
@@ -59,7 +80,7 @@
 
 <section>
   <div class="prose">
-    <h2 id="act-1-nor">Act 1: NOR — Fully Worked Example</h2>
+    <h2 id="section-1-nor">Section 1: NOR — Fully Worked Example</h2>
 
     <p>
       Let's start with NOR. This is a <strong>fully worked example</strong> — you'll study
@@ -67,7 +88,7 @@
       first produces faster learning than problem-solving first for novices.
     </p>
 
-    <h3>Warm-up: NOR Truth Table</h3>
+    <h3 id="nor-truth-table">NOR Truth Table</h3>
 
     <div class="question">
       <p>Fill in the truth table for NOR using just two bits. How does NOR relate to OR?</p>
@@ -75,7 +96,7 @@
 
     <p>
       Think about it, then
-      <button class="action" onclick={() => truthTable?.reveal()} disabled={!truthTable}>reveal the NOR column</button>.
+      <button class="action" onclick={() => truthTable?.reveal()} disabled={!truthTable}>reveal the NOR column</button> (<button class="action" onclick={() => truthTable?.reset()} aria-label="Reset NOR truth table" disabled={!truthTable}>reset</button>).
     </p>
   </div>
 
@@ -88,7 +109,7 @@
       <strong>Key insight:</strong> NOR = NOT(OR). The output is 1 only when <em>both</em> inputs are 0.
     </div>
 
-    <h3>Bitwise Application</h3>
+    <h3 id="nor-bit-by-bit">NOR, Bit by Bit</h3>
 
     <div class="question">
       <p>Apply NOR bitwise to these 4-bit values: 1010 NOR 1100. Work it bit by bit.</p>
@@ -96,7 +117,7 @@
 
     <p>
       Try it mentally first, then
-      <button class="action" onclick={() => bitOp?.animate()} disabled={!bitOp}>animate the operation</button>
+      <button class="action" onclick={() => bitOp?.animate()} disabled={!bitOp}>animate the operation</button> (<button class="action" onclick={() => bitOp?.reset()} aria-label="Reset bitwise NOR operation" disabled={!bitOp}>reset</button>)
       to check your work.
     </p>
   </div>
@@ -111,7 +132,7 @@
     </p>
     <p>MIPS does exactly this — for all 32 bits in parallel, in a single clock cycle.</p>
 
-    <h3>One Instruction Does It All</h3>
+    <h3 id="nor-one-instruction">One Instruction Does It All</h3>
 
     <p>
       Because <code>nor</code> is a real MIPS hardware instruction, the entire body is one line.
@@ -128,10 +149,10 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealSurprise = true} disabled={!hydrated}>Why NOR instead of NOT?</button>
+      <button class="action" onclick={() => revealSurprise = !revealSurprise} aria-expanded={revealSurprise} disabled={!hydrated}>{revealSurprise ? 'Hide' : 'Why NOR instead of NOT?'}</button>
     </p>
 
-    <h3>Wire It Up</h3>
+    <h3 id="nor-wire-it-up">Wire It Up</h3>
 
     <div class="question">
       <p>The inputs are in <code>$a0</code> and <code>$a1</code>. The output goes in <code>$v0</code>. What's the instruction?</p>
@@ -143,10 +164,10 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealWireUp = true} disabled={!hydrated}>Reveal the instruction</button>
+      <button class="action" onclick={() => revealWireUp = !revealWireUp} aria-expanded={revealWireUp} disabled={!hydrated}>{revealWireUp ? 'Hide' : 'Reveal the instruction'}</button>
     </p>
 
-    <h3>Complete NOR Subprogram</h3>
+    <h3 id="nor-full-subprogram">The Full Subprogram</h3>
 
     <p>
       Here's the complete NOR subprogram, fully annotated. This is a <strong>worked example</strong> —
@@ -159,10 +180,25 @@
   </Figure>
 
   <div class="prose">
-    <h3>Execution Trace</h3>
+    <h3 id="nor-black-box">Black-Box View</h3>
+
     <p>
-      Watch code and registers side by side. Step through to see how <code>nor</code> reads
-      two source registers and writes one destination — the simplest possible trace.
+      Before diving into the code, see NOR as a "black box" — inputs go in, result comes out.
+      <button class="action" onclick={() => animator?.animate()} disabled={!animator}>Animate the data flow</button>
+      (<button class="action" onclick={() => animator?.reset()} aria-label="Reset NOR animation" disabled={!animator}>reset</button>).
+    </p>
+  </div>
+
+  <Figure caption="NOR as a black box — $a0 and $a1 go in, $v0 comes out">
+    <SubprogramAnimator bind:this={animator} instanceId="subprog-nor" inputs={norInputs} outputs={norOutputs} operation="NOR" />
+  </Figure>
+
+  <div class="prose">
+    <h3 id="nor-execution-trace">Execution Trace</h3>
+    <p>
+      Watch code and registers side by side. This trace shows the <strong>complete program</strong>:
+      a <code>main</code> that loads arguments, calls NOR with <code>jal</code>, and receives the
+      result back. Watch <code>$ra</code> and <code>$pc</code> to see the call/return dance in action.
     </p>
   </div>
 
@@ -170,14 +206,15 @@
     <ExecutionTracer
       instanceId="tracer-nor"
       code={norCode}
-      registers={['$a0', '$a1', '$v0']}
+      registers={['$a0', '$a1', '$v0', '$ra', '$pc']}
       steps={norSteps}
-      title="NOR Subprogram"
+      title="NOR — Full Call & Return"
+      addresses={norAddresses}
     />
   </Figure>
 
   <div class="prose">
-    <h3>Reflection</h3>
+    <h3 id="nor-reflection">Reflection</h3>
 
     <div class="question">
       <p>How many lines were scaffold/boilerplate vs. actual logic?</p>
@@ -192,7 +229,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealReflection = true} disabled={!hydrated}>Reveal insight</button>
+      <button class="action" onclick={() => revealReflection = !revealReflection} aria-expanded={revealReflection} disabled={!hydrated}>{revealReflection ? 'Hide' : 'Reveal insight'}</button>
     </p>
   </div>
 </section>

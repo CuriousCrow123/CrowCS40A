@@ -24,10 +24,10 @@
   ];
 
   const callReturnSteps: Step[] = [
-    { instruction: 'Before jal NOR', line: 0, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?', '$ra': '?' }, annotation: 'Caller has loaded arguments — ready to call subprogram' },
-    { instruction: 'jal NOR', line: 3, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?', '$ra': '0x00400010' }, changed: ['$ra'], annotation: 'jal saves the next instruction\'s address in $ra, then jumps to NOR' },
-    { instruction: 'nor $v0, $a0, $a1', line: 6, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000', '$ra': '0x00400010' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'Inside NOR: reads $a0 and $a1, writes result to $v0' },
-    { instruction: 'jr $ra', line: 7, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000', '$ra': '0x00400010' }, reading: ['$ra'], annotation: 'jr copies $ra into $pc — execution jumps back to the caller' },
+    { instruction: 'Before jal NOR', line: 0, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?', '$ra': '?', '$pc': '0x0040000C' }, annotation: 'Caller has loaded arguments — $pc is at jal, ready to call subprogram' },
+    { instruction: 'jal NOR', line: 3, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?', '$ra': '0x00400010', '$pc': '0x00400018' }, changed: ['$ra', '$pc'], annotation: 'jal saves 0x00400010 in $ra and sets $pc to NOR (0x00400018)' },
+    { instruction: 'nor $v0, $a0, $a1', line: 6, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000', '$ra': '0x00400010', '$pc': '0x0040001C' }, reading: ['$a0', '$a1'], changed: ['$v0', '$pc'], annotation: 'Inside NOR: reads $a0 and $a1, writes result to $v0' },
+    { instruction: 'jr $ra', line: 7, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000', '$ra': '0x00400010', '$pc': '0x00400010' }, reading: ['$ra'], changed: ['$pc'], annotation: 'jr copies $ra (0x00400010) into $pc — execution jumps back to the caller' },
   ];
 
   const scaffoldLines: Line[] = [
@@ -48,7 +48,7 @@
 
 <section>
   <div class="prose">
-    <h2 id="act-0-scaffold">Act 0: The Subprogram Scaffold</h2>
+    <h2 id="section-0-scaffold">Section 0: The Subprogram Scaffold</h2>
 
     <p>
       Before writing any new subprograms, let's recall what every MIPS subprogram needs.
@@ -70,7 +70,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealOpen1 = true} disabled={!hydrated}>Reveal answer</button>
+      <button class="action" onclick={() => revealOpen1 = !revealOpen1} aria-expanded={revealOpen1} disabled={!hydrated}>{revealOpen1 ? 'Hide' : 'Reveal answer'}</button>
     </p>
 
     <div class="question">
@@ -87,7 +87,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealOpen2 = true} disabled={!hydrated}>Reveal answer</button>
+      <button class="action" onclick={() => revealOpen2 = !revealOpen2} aria-expanded={revealOpen2} disabled={!hydrated}>{revealOpen2 ? 'Hide' : 'Reveal answer'}</button>
     </p>
 
     <p>
@@ -100,7 +100,7 @@
   </Figure>
 
   <div class="prose">
-    <h3>The Call/Return Dance</h3>
+    <h3 id="call-return-dance">The Call/Return Dance</h3>
     <p>
       What actually happens when you call a subprogram? <code>jal</code> (jump and link) saves
       the return address in <code>$ra</code> and jumps. <code>jr $ra</code> jumps back.
@@ -112,7 +112,7 @@
     <ExecutionTracer
       instanceId="tracer-call-return"
       code={callReturnCode}
-      registers={['$a0', '$a1', '$v0', '$ra']}
+      registers={['$a0', '$a1', '$v0', '$ra', '$pc']}
       steps={callReturnSteps}
       title="Call / Return Dance"
       addresses={['0x00400000', '0x00400004', '0x00400008', '0x0040000C', '0x00400010', '0x00400014', '0x00400018', '0x0040001C']}
