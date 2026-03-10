@@ -193,8 +193,6 @@
     letter-spacing: 0.05em;
     color: var(--color-text-muted);
     padding: 0;
-    min-width: var(--tt-cell-size);
-    min-height: var(--tt-cell-size);
     height: var(--tt-cell-size);
     text-align: center;
     vertical-align: middle;

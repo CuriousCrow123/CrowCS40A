@@ -200,6 +200,12 @@
     to { opacity: 1; }
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .code-line.revealed {
+      animation: none;
+    }
+  }
+
   .gutter {
     display: inline-block;
     width: var(--mips-editor-gutter-width);

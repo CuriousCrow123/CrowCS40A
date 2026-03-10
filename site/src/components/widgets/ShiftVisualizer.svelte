@@ -185,11 +185,11 @@
     <span class="shift-arrow">
       {#if direction === 'left'}
         {#each { length: shiftAmount } as _}
-          <span class="arrow-char">&larr;</span>
+          <span class="arrow-char" aria-hidden="true">&larr;</span>
         {/each}
       {:else}
         {#each { length: shiftAmount } as _}
-          <span class="arrow-char">&rarr;</span>
+          <span class="arrow-char" aria-hidden="true">&rarr;</span>
         {/each}
       {/if}
     </span>
