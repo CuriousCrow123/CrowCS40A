@@ -2,11 +2,23 @@
   import Figure from '../../essay/Figure.svelte';
   import MipsEditor from '../../widgets/MipsEditor.svelte';
   import ShiftVisualizer from '../../widgets/ShiftVisualizer.svelte';
-  import type { Line } from '../../../lib/types';
+  import RegisterFile from '../../widgets/RegisterFile.svelte';
+  import type { Line, Step } from '../../../lib/types';
 
-  let shiftDemo: ReturnType<typeof ShiftVisualizer>;
-  let shiftMult4: ReturnType<typeof ShiftVisualizer>;
-  let codeEditor: ReturnType<typeof MipsEditor>;
+  let shiftDemo = $state<ReturnType<typeof ShiftVisualizer>>();
+  let shiftMult4 = $state<ReturnType<typeof ShiftVisualizer>>();
+  let codeEditor = $state<ReturnType<typeof MipsEditor>>();
+
+  let regFile = $state<ReturnType<typeof RegisterFile>>();
+
+  const mult4Steps: Step[] = [
+    { instruction: 'Initial state', registers: { '$a0': '7', '$v0': '?' }, annotation: 'Caller loaded value to multiply' },
+    { instruction: 'sll $v0, $a0, 2', registers: { '$a0': '7', '$v0': '28' }, reading: ['$a0'], changed: ['$v0'], annotation: 'Read $a0 (7) → shift left by 2 → write 28 to $v0. That\'s 7 × 4!' },
+    { instruction: 'jr $ra', registers: { '$a0': '7', '$v0': '28' }, annotation: 'Return to caller — 7 × 4 = 28 ✓' },
+  ];
+
+  let hydrated = $state(false);
+  $effect(() => { hydrated = true; });
 
   let revealWhy = $state(false);
   let revealGeneralize = $state(false);
@@ -60,7 +72,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealWhy = true}>Reveal why</button>
+      <button class="action" onclick={() => revealWhy = true} disabled={!hydrated}>Reveal why</button>
     </p>
 
     <h3>The Decimal Analogy</h3>
@@ -104,7 +116,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealGeneralize = true}>Reveal answer</button>
+      <button class="action" onclick={() => revealGeneralize = true} disabled={!hydrated}>Reveal answer</button>
     </p>
 
     <h3>Predict Before Coding</h3>
@@ -150,9 +162,26 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealCode = true}>Explain the answer</button>
+      <button class="action" onclick={() => revealCode = true} disabled={!hydrated}>Explain the answer</button>
     </p>
 
+    <h3>Execution Trace</h3>
+    <p>
+      Just like NOR — one instruction, one read, one write. The difference is the operation:
+      shift instead of bitwise logic.
+    </p>
+    <p>
+      <button class="action" onclick={() => regFile?.step()} disabled={!regFile}>Next step</button>
+      <button class="action" onclick={() => regFile?.stepBack()} disabled={!regFile}>Previous step</button>
+      <button class="action" onclick={() => regFile?.reset()} disabled={!regFile}>Reset</button>
+    </p>
+  </div>
+
+  <Figure caption="Mult4 execution trace — one shift instruction does it all">
+    <RegisterFile bind:this={regFile} instanceId="regfile-mult4" registers={['$a0', '$v0']} steps={mult4Steps} />
+  </Figure>
+
+  <div class="prose">
     <div class="callout">
       <strong>Edge case:</strong> If <code>$a0</code> is very large (> 2²⁹ - 1 or &lt; -2²⁹),
       the upper bits are silently lost — the same overflow issue as integer overflow, but
@@ -173,7 +202,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealReflection = true}>Reveal answer</button>
+      <button class="action" onclick={() => revealReflection = true} disabled={!hydrated}>Reveal answer</button>
     </p>
   </div>
 </section>

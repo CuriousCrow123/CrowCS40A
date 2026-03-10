@@ -3,7 +3,10 @@
   import MipsEditor from '../../widgets/MipsEditor.svelte';
   import type { Line } from '../../../lib/types';
 
-  let testEditor: ReturnType<typeof MipsEditor>;
+  let testEditor = $state<ReturnType<typeof MipsEditor>>();
+
+  let hydrated = $state(false);
+  $effect(() => { hydrated = true; });
 
   let revealReflection = $state(false);
 
@@ -130,7 +133,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealReflection = true}>Reveal final summary</button>
+      <button class="action" onclick={() => revealReflection = true} disabled={!hydrated}>Reveal final summary</button>
     </p>
   </div>
 </section>

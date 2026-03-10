@@ -3,11 +3,16 @@
   import MipsEditor from '../../widgets/MipsEditor.svelte';
   import TruthTable from '../../widgets/TruthTable.svelte';
   import BitOperator from '../../widgets/BitOperator.svelte';
-  import type { Line, Column } from '../../../lib/types';
+  import RegisterFile from '../../widgets/RegisterFile.svelte';
+  import type { Line, Column, Step } from '../../../lib/types';
 
-  let truthTable: ReturnType<typeof TruthTable>;
-  let bitOp: ReturnType<typeof BitOperator>;
-  let codeEditor: ReturnType<typeof MipsEditor>;
+  let truthTable = $state<ReturnType<typeof TruthTable>>();
+  let bitOp = $state<ReturnType<typeof BitOperator>>();
+  let codeEditor = $state<ReturnType<typeof MipsEditor>>();
+  let regFile = $state<ReturnType<typeof RegisterFile>>();
+
+  let hydrated = $state(false);
+  $effect(() => { hydrated = true; });
 
   let revealSurprise = $state(false);
   let revealWireUp = $state(false);
@@ -18,6 +23,12 @@
     { header: 'B', values: [0, 1, 0, 1] },
     { header: 'A OR B', values: [0, 1, 1, 1] },
     { header: 'A NOR B', values: [1, 0, 0, 0] },
+  ];
+
+  const norSteps: Step[] = [
+    { instruction: 'Initial state', registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?' }, annotation: 'Caller loaded arguments into $a0 and $a1' },
+    { instruction: 'nor $v0, $a0, $a1', registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'Read $a0 and $a1 → NOR all 32 bits → write result to $v0' },
+    { instruction: 'jr $ra', registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000' }, annotation: 'Return to caller — result is in $v0' },
   ];
 
   const norLines: Line[] = [
@@ -102,7 +113,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealSurprise = true}>Reveal the surprise</button> —
+      <button class="action" onclick={() => revealSurprise = true} disabled={!hydrated}>Reveal the surprise</button> —
       this changes your approach from "build NOR from pieces" to something much simpler.
     </p>
 
@@ -118,7 +129,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealWireUp = true}>Reveal the instruction</button>
+      <button class="action" onclick={() => revealWireUp = true} disabled={!hydrated}>Reveal the instruction</button>
     </p>
 
     <h3>Complete NOR Subprogram</h3>
@@ -131,6 +142,23 @@
 
   <Figure caption="Complete NOR subprogram — the logic is ONE line; the rest is structure and documentation">
     <MipsEditor bind:this={codeEditor} instanceId="mips-nor" lines={norLines} title="NOR Subprogram" />
+  </Figure>
+
+  <div class="prose">
+    <h3>Execution Trace</h3>
+    <p>
+      Watch what happens in the registers when NOR executes. This is the simplest possible trace —
+      ONE instruction that reads two registers and writes one.
+    </p>
+    <p>
+      <button class="action" onclick={() => regFile?.step()} disabled={!regFile}>Next step</button>
+      <button class="action" onclick={() => regFile?.stepBack()} disabled={!regFile}>Previous step</button>
+      <button class="action" onclick={() => regFile?.reset()} disabled={!regFile}>Reset</button>
+    </p>
+  </div>
+
+  <Figure caption="NOR execution trace — one instruction, two sources, one destination">
+    <RegisterFile bind:this={regFile} instanceId="regfile-nor" registers={['$a0', '$a1', '$v0']} steps={norSteps} />
   </Figure>
 
   <div class="prose">
@@ -149,7 +177,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealReflection = true}>Reveal insight</button>
+      <button class="action" onclick={() => revealReflection = true} disabled={!hydrated}>Reveal insight</button>
     </p>
   </div>
 </section>

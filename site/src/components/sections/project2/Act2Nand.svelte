@@ -2,17 +2,30 @@
   import Figure from '../../essay/Figure.svelte';
   import MipsEditor from '../../widgets/MipsEditor.svelte';
   import TruthTable from '../../widgets/TruthTable.svelte';
-  import type { Line, Column } from '../../../lib/types';
+  import RegisterFile from '../../widgets/RegisterFile.svelte';
+  import type { Line, Column, Step } from '../../../lib/types';
 
-  let truthTable: ReturnType<typeof TruthTable>;
-  let completionEditor: ReturnType<typeof MipsEditor>;
-  let norCompareEditor: ReturnType<typeof MipsEditor>;
-  let nandCompareEditor: ReturnType<typeof MipsEditor>;
+  let truthTable = $state<ReturnType<typeof TruthTable>>();
+  let completionEditor = $state<ReturnType<typeof MipsEditor>>();
+  let norCompareEditor = $state<ReturnType<typeof MipsEditor>>();
+  let nandCompareEditor = $state<ReturnType<typeof MipsEditor>>();
+
+  let hydrated = $state(false);
+  $effect(() => { hydrated = true; });
 
   let revealPattern = $state(false);
   let revealComplete = $state(false);
   let revealMars = $state(false);
   let revealComparison = $state(false);
+
+  let regFile = $state<ReturnType<typeof RegisterFile>>();
+
+  const nandSteps: Step[] = [
+    { instruction: 'Initial state', registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '?' }, annotation: 'Arguments loaded by caller' },
+    { instruction: 'and $v0, $a0, $a1', registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0xFF000000' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'Step 1: AND the inputs — intermediate result in $v0' },
+    { instruction: 'not $v0, $v0', registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0x00FFFFFF' }, reading: ['$v0'], changed: ['$v0'], annotation: 'Step 2: NOT the intermediate — $v0 is both source AND destination!' },
+    { instruction: 'jr $ra', registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0x00FFFFFF' }, annotation: 'Return with NAND result in $v0' },
+  ];
 
   const nandColumns: Column[] = [
     { header: 'A', values: [0, 0, 1, 1] },
@@ -76,7 +89,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealPattern = true}>Reveal what happens</button>
+      <button class="action" onclick={() => revealPattern = true} disabled={!hydrated}>Reveal what happens</button>
     </p>
 
     <h3>NAND Truth Table</h3>
@@ -124,7 +137,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealComplete = true}>Reveal Step 2</button>
+      <button class="action" onclick={() => revealComplete = true} disabled={!hydrated}>Reveal Step 2</button>
     </p>
 
     <div class="reveal" data-open={revealMars}>
@@ -137,9 +150,26 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealMars = true}>What does MARS show?</button>
+      <button class="action" onclick={() => revealMars = true} disabled={!hydrated}>What does MARS show?</button>
     </p>
 
+    <h3>Execution Trace</h3>
+    <p>
+      NAND requires TWO instructions. Step through to see how they chain together.
+      Pay special attention to Step 2 — the same register is both source and destination.
+    </p>
+    <p>
+      <button class="action" onclick={() => regFile?.step()} disabled={!regFile}>Next step</button>
+      <button class="action" onclick={() => regFile?.stepBack()} disabled={!regFile}>Previous step</button>
+      <button class="action" onclick={() => regFile?.reset()} disabled={!regFile}>Reset</button>
+    </p>
+  </div>
+
+  <Figure caption="NAND execution trace — two instructions, watch $v0 serve as both source and destination in Step 2">
+    <RegisterFile bind:this={regFile} instanceId="regfile-nand" registers={['$a0', '$a1', '$v0']} steps={nandSteps} />
+  </Figure>
+
+  <div class="prose">
     <h3>Cross-Subprogram Comparison</h3>
 
     <div class="question">
@@ -167,7 +197,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealComparison = true}>Reveal comparison insight</button>
+      <button class="action" onclick={() => revealComparison = true} disabled={!hydrated}>Reveal comparison insight</button>
     </p>
   </div>
 </section>

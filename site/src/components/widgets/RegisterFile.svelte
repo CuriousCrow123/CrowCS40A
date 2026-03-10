@@ -34,17 +34,23 @@
 
   let current = $derived(steps[currentStep]);
   let changedSet = $derived(new Set(current?.changed ?? []));
+  let readingSet = $derived(new Set(current?.reading ?? []));
   let totalSteps = $derived(steps.length);
   let isFirst = $derived(currentStep === 0);
   let isLast = $derived(currentStep === totalSteps - 1);
 
   // Build a live-region announcement for changed registers
   let changeAnnouncement = $derived.by(() => {
+    const parts: string[] = [];
+    const reading = current?.reading;
+    if (reading && reading.length > 0) {
+      parts.push('Reading ' + reading.map(r => `${r} (${current.registers[r] ?? '?'})`).join(', '));
+    }
     const changed = current?.changed;
-    if (!changed || changed.length === 0) return '';
-    return changed
-      .map((r) => `Register ${r} changed to ${current.registers[r] ?? '?'}`)
-      .join('. ');
+    if (changed && changed.length > 0) {
+      parts.push(changed.map(r => `${r} changed to ${current.registers[r] ?? '?'}`).join('. '));
+    }
+    return parts.join('. ');
   });
 
   export function step() {
@@ -102,9 +108,18 @@
       <div
         class="register-card"
         class:changed
+        class:reading={readingSet.has(reg)}
+        class:read-write={changed && readingSet.has(reg)}
         data-flash={changed ? flashGeneration : undefined}
       >
         <span class="reg-name">{reg}</span>
+        {#if changed && readingSet.has(reg)}
+          <span class="reg-role read-write-role">read &rarr; write</span>
+        {:else if readingSet.has(reg)}
+          <span class="reg-role reading-role">source</span>
+        {:else if changed}
+          <span class="reg-role writing-role">dest</span>
+        {/if}
         <span class="reg-value">{value}</span>
       </div>
     {/each}
@@ -224,6 +239,31 @@
     }
   }
 
+  /* Reading registers — source operands */
+  .register-card.reading {
+    border-color: var(--color-highlight, #f5a623);
+    background: color-mix(in srgb, var(--color-highlight, #f5a623) 8%, var(--color-bg-surface, #1a1a2e));
+  }
+
+  /* Combined read + write — register is both source and destination */
+  .register-card.read-write {
+    border-color: var(--color-accent, #7c9cff);
+    background: color-mix(in srgb, var(--color-accent, #7c9cff) 15%, var(--color-bg-surface, #1a1a2e));
+    animation: flash-readwrite 400ms ease-out;
+  }
+
+  @keyframes flash-readwrite {
+    0% {
+      background: color-mix(in srgb, var(--color-highlight, #f5a623) 30%, var(--color-bg-surface, #1a1a2e));
+    }
+    50% {
+      background: color-mix(in srgb, var(--color-accent, #7c9cff) 30%, var(--color-bg-surface, #1a1a2e));
+    }
+    100% {
+      background: color-mix(in srgb, var(--color-accent, #7c9cff) 15%, var(--color-bg-surface, #1a1a2e));
+    }
+  }
+
   .reg-name {
     font-family: var(--font-mono);
     font-size: var(--regfile-label-size);
@@ -237,6 +277,31 @@
     font-weight: 500;
     color: var(--color-text, #e0e0e0);
     white-space: nowrap;
+  }
+
+  .reg-role {
+    font-family: var(--font-mono);
+    font-size: calc(var(--regfile-label-size) * 0.75);
+    letter-spacing: 0.02em;
+    user-select: none;
+  }
+
+  .reading-role {
+    color: var(--color-highlight, #f5a623);
+  }
+
+  .writing-role {
+    color: var(--color-accent, #7c9cff);
+  }
+
+  .read-write-role {
+    color: var(--color-accent, #7c9cff);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .register-card.read-write {
+      animation: none;
+    }
   }
 
   /* Annotation */

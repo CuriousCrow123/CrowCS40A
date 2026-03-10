@@ -3,8 +3,11 @@
   import MipsEditor from '../../widgets/MipsEditor.svelte';
   import type { Line } from '../../../lib/types';
 
-  let beforeEditor: ReturnType<typeof MipsEditor>;
-  let afterEditor: ReturnType<typeof MipsEditor>;
+  let hydrated = $state(false);
+  $effect(() => { hydrated = true; });
+
+  let beforeEditor = $state<ReturnType<typeof MipsEditor>>();
+  let afterEditor = $state<ReturnType<typeof MipsEditor>>();
 
   const beforeLines: Line[] = [
     { kind: 'visible', code: '# File:\tutils.asm' },

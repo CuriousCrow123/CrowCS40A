@@ -29,5 +29,6 @@ export type Step = {
   instruction: string;
   registers: RegisterState;
   changed?: MipsRegister[];
+  reading?: MipsRegister[];
   annotation?: string;
 };

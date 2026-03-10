@@ -6,10 +6,13 @@
   import RegisterFile from '../../widgets/RegisterFile.svelte';
   import type { Line, Column, Step } from '../../../lib/types';
 
-  let truthTable: ReturnType<typeof TruthTable>;
-  let bitOp: ReturnType<typeof BitOperator>;
-  let regFile: ReturnType<typeof RegisterFile>;
-  let codeEditor: ReturnType<typeof MipsEditor>;
+  let truthTable = $state<ReturnType<typeof TruthTable>>();
+  let bitOp = $state<ReturnType<typeof BitOperator>>();
+  let regFile = $state<ReturnType<typeof RegisterFile>>();
+  let codeEditor = $state<ReturnType<typeof MipsEditor>>();
+
+  let hydrated = $state(false);
+  $effect(() => { hydrated = true; });
 
   let revealSelfInverse = $state(false);
   let revealChallenge = $state(false);
@@ -26,12 +29,12 @@
   ];
 
   const swapSteps: Step[] = [
-    { instruction: 'Initial', registers: { '$a0': 'A', '$a1': 'B', '$v0': '?', '$v1': '?' } },
-    { instruction: 'xor $a0, $a0, $a1', registers: { '$a0': 'A XOR B', '$a1': 'B', '$v0': '?', '$v1': '?' }, changed: ['$a0'], annotation: '$a0 now holds A XOR B' },
-    { instruction: 'xor $a1, $a0, $a1', registers: { '$a0': 'A XOR B', '$a1': 'A', '$v0': '?', '$v1': '?' }, changed: ['$a1'], annotation: 'Self-inverse: (A XOR B) XOR B = A' },
-    { instruction: 'xor $a0, $a0, $a1', registers: { '$a0': 'B', '$a1': 'A', '$v0': '?', '$v1': '?' }, changed: ['$a0'], annotation: 'Self-inverse: (A XOR B) XOR A = B' },
-    { instruction: 'move $v0, $a0', registers: { '$a0': 'B', '$a1': 'A', '$v0': 'B', '$v1': '?' }, changed: ['$v0'], annotation: '$v0 = B (original $a1)' },
-    { instruction: 'move $v1, $a1', registers: { '$a0': 'B', '$a1': 'A', '$v0': 'B', '$v1': 'A' }, changed: ['$v1'], annotation: 'Swap complete! $v0 = B, $v1 = A' },
+    { instruction: 'Initial', registers: { '$a0': 'A', '$a1': 'B', '$v0': '?', '$v1': '?' }, annotation: 'Starting values: $a0 = A, $a1 = B' },
+    { instruction: 'xor $a0, $a0, $a1', registers: { '$a0': 'A XOR B', '$a1': 'B', '$v0': '?', '$v1': '?' }, reading: ['$a0', '$a1'], changed: ['$a0'], annotation: '$a0 now holds A XOR B — the original A is "encoded" with B' },
+    { instruction: 'xor $a1, $a0, $a1', registers: { '$a0': 'A XOR B', '$a1': 'A', '$v0': '?', '$v1': '?' }, reading: ['$a0', '$a1'], changed: ['$a1'], annotation: 'Self-inverse: (A XOR B) XOR B = A — original A recovered in $a1!' },
+    { instruction: 'xor $a0, $a0, $a1', registers: { '$a0': 'B', '$a1': 'A', '$v0': '?', '$v1': '?' }, reading: ['$a0', '$a1'], changed: ['$a0'], annotation: 'Self-inverse: (A XOR B) XOR A = B — original B now in $a0' },
+    { instruction: 'move $v0, $a0', registers: { '$a0': 'B', '$a1': 'A', '$v0': 'B', '$v1': '?' }, reading: ['$a0'], changed: ['$v0'], annotation: '$v0 = B (original $a1) — first output register set' },
+    { instruction: 'move $v1, $a1', registers: { '$a0': 'B', '$a1': 'A', '$v0': 'B', '$v1': 'A' }, reading: ['$a1'], changed: ['$v1'], annotation: 'Swap complete! $v0 = B, $v1 = A — both outputs set' },
   ];
 
   const swapLines: Line[] = [
@@ -102,7 +105,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealSelfInverse = true}>Reveal the property</button>
+      <button class="action" onclick={() => revealSelfInverse = true} disabled={!hydrated}>Reveal the property</button>
     </p>
 
     <h3>The Challenge</h3>
@@ -126,7 +129,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealChallenge = true}>I'm stuck — show me the approach</button>
+      <button class="action" onclick={() => revealChallenge = true} disabled={!hydrated}>I'm stuck — show me the approach</button>
     </p>
 
     <h3>The Swap Algorithm Trace</h3>
@@ -163,7 +166,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealEdgeCase = true}>Reveal edge case trace</button>
+      <button class="action" onclick={() => revealEdgeCase = true} disabled={!hydrated}>Reveal edge case trace</button>
     </p>
 
     <h3>Moving to Return Registers</h3>
@@ -193,7 +196,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealMapping = true}>Reveal mapping</button>
+      <button class="action" onclick={() => revealMapping = true} disabled={!hydrated}>Reveal mapping</button>
     </p>
 
     <h3>Why Modifying $a0 and $a1 is OK</h3>
@@ -212,7 +215,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealConvention = true}>Reveal answer</button>
+      <button class="action" onclick={() => revealConvention = true} disabled={!hydrated}>Reveal answer</button>
     </p>
 
     <h3>Write the Complete Subprogram</h3>
@@ -246,7 +249,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealHonesty = true}>Reveal the honest answer</button>
+      <button class="action" onclick={() => revealHonesty = true} disabled={!hydrated}>Reveal the honest answer</button>
     </p>
 
     <h3>Narrative Bookend</h3>
@@ -264,7 +267,7 @@
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealBookend = true}>Reflect</button>
+      <button class="action" onclick={() => revealBookend = true} disabled={!hydrated}>Reflect</button>
     </p>
   </div>
 </section>
