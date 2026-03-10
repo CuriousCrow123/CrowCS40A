@@ -35,6 +35,12 @@ Visual essay template built with Astro 5 + Svelte 5. All source lives in `site/`
 6. Export methods via `export function` for prose control
 7. Create `site/src/pages/sandbox/my-widget.astro` for isolated development
 
+### Svelte 5 runes in utility files
+
+- **Files using `$state`, `$effect`, `$derived`, or `$props` MUST use `.svelte.ts` extension** — plain `.ts` files are not processed by the Svelte compiler, so runes are emitted as raw `$state()` calls that throw `ReferenceError` at runtime
+- This silently breaks hydration for any component that imports the utility, making all `bind:this` refs in that component's section permanently `undefined`
+- Example: `lib/motion.svelte.ts` (not `motion.ts`) for a reactive `prefers-reduced-motion` detector
+
 ### Component patterns
 
 - **Widgets** (`components/widgets/`) are self-contained, expose imperative APIs via `export function`
@@ -55,3 +61,19 @@ Run from `site/`:
 - `npm run dev` — dev server
 - `npm run build` — production build
 - `npm run preview` — preview production build
+
+## MIPS Assembly (MARS Simulator)
+
+<mips-context>
+- Target simulator: MARS 4.5 (MIPS-32)
+- Full reference guide: `docs/mars-mips-reference.md`
+</mips-context>
+
+<mips-conventions>
+- Every program needs `.data` and `.text` segments with `.globl main`
+- Use syscalls for I/O: 4 = print string, 5 = read int, 1 = print int, 10 = exit
+- Follow standard calling conventions: save `$ra` and any `$s` registers on the stack in functions
+- Use pseudo-instructions (`li`, `la`, `move`, `blt`, `bge`, etc.) for readability
+- Use `$t` registers for temporaries, `$s` registers for values that must survive function calls
+- Arguments go in `$a0-$a3`, return values in `$v0-$v1`
+</mips-conventions>
