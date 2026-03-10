@@ -26,6 +26,13 @@ export type BitOperation = BinaryBitOp | UnaryBitOp;
 // Display register — extends MipsRegister with special registers for tracer
 export type DisplayRegister = MipsRegister | '$pc';
 
+// SubprogramAnimator — black-box view of a subprogram's register I/O
+export type SubprogramOp = 'NOR' | 'NAND' | 'SLL' | 'XOR Swap';
+export type RegisterBinding = {
+  register: DisplayRegister;
+  value: string;
+};
+
 // RegisterFile step — typed register keys
 export type RegisterState = Partial<Record<DisplayRegister, string>>;
 export type Step = {
