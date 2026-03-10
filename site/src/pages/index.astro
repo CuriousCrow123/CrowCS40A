@@ -1,10 +1,24 @@
 ---
 import EssayLayout from '../layouts/EssayLayout.astro';
-import Introduction from '../components/sections/example/Introduction.svelte';
-import InteractiveDemo from '../components/sections/example/InteractiveDemo.svelte';
+import Prologue from '../components/sections/project2/Prologue.svelte';
+import Act0Scaffold from '../components/sections/project2/Act0Scaffold.svelte';
+import InterlSyscall from '../components/sections/project2/InterlSyscall.svelte';
+import Act1Nor from '../components/sections/project2/Act1Nor.svelte';
+import Act2Nand from '../components/sections/project2/Act2Nand.svelte';
+import Act3Mult4 from '../components/sections/project2/Act3Mult4.svelte';
+import Act4Swap from '../components/sections/project2/Act4Swap.svelte';
+import Act5Deliverables from '../components/sections/project2/Act5Deliverables.svelte';
+import Act6Verification from '../components/sections/project2/Act6Verification.svelte';
 ---
 
-<EssayLayout title="Example Visual Essay">
-  <Introduction client:visible />
-  <InteractiveDemo client:visible />
+<EssayLayout title="Project 2: MIPS Subprograms" description="A concept-first walkthrough of NOR, NAND, Mult4, and Swap">
+  <Prologue client:visible />
+  <Act0Scaffold client:visible />
+  <InterlSyscall client:visible />
+  <Act1Nor client:visible />
+  <Act2Nand client:visible />
+  <Act3Mult4 client:visible />
+  <Act4Swap client:visible />
+  <Act5Deliverables client:visible />
+  <Act6Verification client:visible />
 </EssayLayout>
