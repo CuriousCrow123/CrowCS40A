@@ -293,7 +293,7 @@
   </Figure>
 
   <div class="prose">
-    <h3 id="swap-honesty">Honesty About XOR Swap</h3>
+    <h3 id="swap-was-it-necessary">Was XOR Swap Necessary?</h3>
 
     <div class="question">
       <p>Could we skip the XOR and just do <code>move $v0, $a1</code> / <code>move $v1, $a0</code> to achieve the same result?</p>

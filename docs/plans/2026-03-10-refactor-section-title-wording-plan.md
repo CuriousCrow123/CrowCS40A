@@ -1,7 +1,7 @@
 ---
 title: "refactor: Improve section heading wording for clarity and consistency"
 type: refactor
-status: active
+status: completed
 date: 2026-03-10
 ---
 
@@ -116,11 +116,11 @@ Keep: Expected Output, Final Reflection
 
 ## Acceptance Criteria
 
-- [ ] All "Act" h2 headings renamed to "Section"
-- [ ] All `id` attributes on renamed h2s updated (e.g., `act-1-nor` → `section-1-nor`)
-- [ ] All proposed h3 heading renames applied with updated ids
-- [ ] Prose references to "Act N" in section body text updated to "Section N"
-- [ ] Build passes cleanly
+- [x] All "Act" h2 headings renamed to "Section"
+- [x] All `id` attributes on renamed h2s updated (e.g., `act-1-nor` → `section-1-nor`)
+- [x] All proposed h3 heading renames applied with updated ids
+- [x] Prose references to "Act N" in section body text updated to "Section N"
+- [x] Build passes cleanly
 
 ## Files to Modify
 

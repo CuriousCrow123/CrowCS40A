@@ -127,7 +127,7 @@
       so <code>$ra</code> is never at risk of being overwritten.
     </div>
 
-    <h3 id="peek-inside-utilities">Peek Inside the Utility Subprograms</h3>
+    <h3 id="inside-utilities">Inside the Utilities</h3>
 
     <p>
       The test harness calls <code>PrintInt</code>, <code>PrintNewLine</code>, and
