@@ -47,11 +47,21 @@
   let highlightedLine = $state<number | null>(null);
   let announceText = $state('');
 
+  // Persist param tuning
+  $effect(() => { saveParams(WIDGET_ID, params, paramDefs); });
+
+  // Persist student reveals
   $effect(() => {
     if (typeof localStorage === 'undefined') return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify([...revealedLines]));
     } catch { /* quota exceeded */ }
+  });
+
+  // Highlight timer cancellation
+  let highlightTimer: ReturnType<typeof setTimeout> | null = null;
+  $effect(() => {
+    return () => { if (highlightTimer) clearTimeout(highlightTimer); };
   });
 
   // --- Exported imperative API ---
@@ -74,9 +84,11 @@
 
   export function highlightLine(n: number) {
     if (n < 0 || n >= lines.length) return;
+    if (highlightTimer) clearTimeout(highlightTimer);
     highlightedLine = n;
-    setTimeout(() => {
+    highlightTimer = setTimeout(() => {
       if (highlightedLine === n) highlightedLine = null;
+      highlightTimer = null;
     }, 1200);
   }
 

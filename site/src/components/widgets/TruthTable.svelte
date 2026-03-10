@@ -61,6 +61,9 @@
     requestAnimationFrame(() => { announcement = msg; });
   }
 
+  // Persist param tuning
+  $effect(() => { saveParams(WIDGET_ID, params, paramDefs); });
+
   // Save state whenever revealedColumns changes
   $effect(() => {
     saveState(instanceId, persisted);

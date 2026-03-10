@@ -22,6 +22,9 @@
     steps: Step[];
   } = $props();
 
+  // Persist param tuning
+  $effect(() => { saveParams(WIDGET_ID, params, paramDefs); });
+
   let currentStep = $state(0);
 
   // Track which registers just changed for the flash animation
