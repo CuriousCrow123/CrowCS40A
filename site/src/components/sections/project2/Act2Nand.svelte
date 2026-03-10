@@ -2,7 +2,7 @@
   import Figure from '../../essay/Figure.svelte';
   import MipsEditor from '../../widgets/MipsEditor.svelte';
   import TruthTable from '../../widgets/TruthTable.svelte';
-  import RegisterFile from '../../widgets/RegisterFile.svelte';
+  import ExecutionTracer from '../../widgets/ExecutionTracer.svelte';
   import type { Line, Column, Step } from '../../../lib/types';
 
   let truthTable = $state<ReturnType<typeof TruthTable>>();
@@ -18,13 +18,25 @@
   let revealMars = $state(false);
   let revealComparison = $state(false);
 
-  let regFile = $state<ReturnType<typeof RegisterFile>>();
+  const nandCode = [
+    '.text',
+    'NAND:',
+    '# Subprogram:   NAND',
+    '# Author:       [student name]',
+    '# Purpose:      Performs bitwise NAND on two values',
+    '# Input:        $a0 = first value, $a1 = second value',
+    '# Output:       $v0 = $a0 NAND $a1',
+    '# Side effects: none',
+    '    and   $v0, $a0, $a1',
+    '    not   $v0, $v0',
+    '    jr    $ra',
+  ];
 
   const nandSteps: Step[] = [
-    { instruction: 'Initial state', registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '?' }, annotation: 'Arguments loaded by caller' },
-    { instruction: 'and $v0, $a0, $a1', registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0xFF000000' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'Step 1: AND the inputs — intermediate result in $v0' },
-    { instruction: 'not $v0, $v0', registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0x00FFFFFF' }, reading: ['$v0'], changed: ['$v0'], annotation: 'Step 2: NOT the intermediate — $v0 is both source AND destination!' },
-    { instruction: 'jr $ra', registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0x00FFFFFF' }, annotation: 'Return with NAND result in $v0' },
+    { instruction: 'Initial state', line: 0, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '?' }, annotation: 'Arguments loaded by caller' },
+    { instruction: 'and $v0, $a0, $a1', line: 8, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0xFF000000' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'Step 1: AND the inputs — intermediate result in $v0' },
+    { instruction: 'not $v0, $v0', line: 9, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0x00FFFFFF' }, reading: ['$v0'], changed: ['$v0'], annotation: 'Step 2: NOT the intermediate — $v0 is both source AND destination!' },
+    { instruction: 'jr $ra', line: 10, registers: { '$a0': '0xFF00FF00', '$a1': '0xFFFF0000', '$v0': '0x00FFFFFF' }, annotation: 'Return with NAND result in $v0' },
   ];
 
   const nandColumns: Column[] = [
@@ -156,17 +168,18 @@
     <h3>Execution Trace</h3>
     <p>
       NAND requires TWO instructions. Step through to see how they chain together.
-      Pay special attention to Step 2 — the same register is both source and destination.
-    </p>
-    <p>
-      <button class="action" onclick={() => regFile?.step()} disabled={!regFile}>Next step</button>
-      <button class="action" onclick={() => regFile?.stepBack()} disabled={!regFile}>Previous step</button>
-      <button class="action" onclick={() => regFile?.reset()} disabled={!regFile}>Reset</button>
+      Pay special attention to Step 2 — <code>$v0</code> is both source and destination.
     </p>
   </div>
 
   <Figure caption="NAND execution trace — two instructions, watch $v0 serve as both source and destination in Step 2">
-    <RegisterFile bind:this={regFile} instanceId="regfile-nand" registers={['$a0', '$a1', '$v0']} steps={nandSteps} />
+    <ExecutionTracer
+      instanceId="tracer-nand"
+      code={nandCode}
+      registers={['$a0', '$a1', '$v0']}
+      steps={nandSteps}
+      title="NAND Subprogram"
+    />
   </Figure>
 
   <div class="prose">

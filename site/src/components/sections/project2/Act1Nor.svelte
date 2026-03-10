@@ -3,13 +3,12 @@
   import MipsEditor from '../../widgets/MipsEditor.svelte';
   import TruthTable from '../../widgets/TruthTable.svelte';
   import BitOperator from '../../widgets/BitOperator.svelte';
-  import RegisterFile from '../../widgets/RegisterFile.svelte';
+  import ExecutionTracer from '../../widgets/ExecutionTracer.svelte';
   import type { Line, Column, Step } from '../../../lib/types';
 
   let truthTable = $state<ReturnType<typeof TruthTable>>();
   let bitOp = $state<ReturnType<typeof BitOperator>>();
   let codeEditor = $state<ReturnType<typeof MipsEditor>>();
-  let regFile = $state<ReturnType<typeof RegisterFile>>();
 
   let hydrated = $state(false);
   $effect(() => { hydrated = true; });
@@ -25,10 +24,23 @@
     { header: 'A NOR B', values: [1, 0, 0, 0] },
   ];
 
+  const norCode = [
+    '.text',
+    'NOR:',
+    '# Subprogram:   NOR',
+    '# Author:       [student name]',
+    '# Purpose:      Performs bitwise NOR on two values',
+    '# Input:        $a0 = first value, $a1 = second value',
+    '# Output:       $v0 = $a0 NOR $a1',
+    '# Side effects: none',
+    '    nor   $v0, $a0, $a1',
+    '    jr    $ra',
+  ];
+
   const norSteps: Step[] = [
-    { instruction: 'Initial state', registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?' }, annotation: 'Caller loaded arguments into $a0 and $a1' },
-    { instruction: 'nor $v0, $a0, $a1', registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'Read $a0 and $a1 → NOR all 32 bits → write result to $v0' },
-    { instruction: 'jr $ra', registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000' }, annotation: 'Return to caller — result is in $v0' },
+    { instruction: 'Initial state', line: 0, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?' }, annotation: 'Caller loaded arguments into $a0 and $a1' },
+    { instruction: 'nor $v0, $a0, $a1', line: 8, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'nor rd, rs, rt — read $a0 (rs) and $a1 (rt), NOR all 32 bits, write result to $v0 (rd)' },
+    { instruction: 'jr $ra', line: 9, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000' }, annotation: 'Return to caller — result is in $v0' },
   ];
 
   const norLines: Line[] = [
@@ -99,22 +111,24 @@
     </p>
     <p>MIPS does exactly this — for all 32 bits in parallel, in a single clock cycle.</p>
 
-    <h3>The Surprise: <code>nor</code> is a Real Instruction</h3>
+    <h3>One Instruction Does It All</h3>
+
+    <p>
+      Because <code>nor</code> is a real MIPS hardware instruction, the entire body is one line.
+      No building from pieces needed.
+    </p>
 
     <div class="reveal" data-open={revealSurprise}>
       <div class="reveal-inner">
         <div class="insight">
-          <strong>MIPS has a hardware <code>nor</code> instruction.</strong> In fact,
-          <code>not</code> is a <em>pseudo-instruction</em> that the assembler implements
-          <strong>as</strong> <code>nor Rd, Rs, $zero</code>. MIPS chose to include
-          <code>nor</code> because NOR-with-zero gives you NOT for free, making a separate
-          NOT instruction redundant.
+          <strong>Fun fact:</strong> <code>not</code> is actually a <em>pseudo-instruction</em> that
+          the assembler implements as <code>nor rd, rs, $zero</code>. NOR-with-zero gives you NOT
+          for free — that's why MIPS includes <code>nor</code> in hardware instead of <code>not</code>.
         </div>
       </div>
     </div>
     <p>
-      <button class="action" onclick={() => revealSurprise = true} disabled={!hydrated}>Reveal the surprise</button> —
-      this changes your approach from "build NOR from pieces" to something much simpler.
+      <button class="action" onclick={() => revealSurprise = true} disabled={!hydrated}>Why NOR instead of NOT?</button>
     </p>
 
     <h3>Wire It Up</h3>
@@ -147,18 +161,19 @@
   <div class="prose">
     <h3>Execution Trace</h3>
     <p>
-      Watch what happens in the registers when NOR executes. This is the simplest possible trace —
-      ONE instruction that reads two registers and writes one.
-    </p>
-    <p>
-      <button class="action" onclick={() => regFile?.step()} disabled={!regFile}>Next step</button>
-      <button class="action" onclick={() => regFile?.stepBack()} disabled={!regFile}>Previous step</button>
-      <button class="action" onclick={() => regFile?.reset()} disabled={!regFile}>Reset</button>
+      Watch code and registers side by side. Step through to see how <code>nor</code> reads
+      two source registers and writes one destination — the simplest possible trace.
     </p>
   </div>
 
-  <Figure caption="NOR execution trace — one instruction, two sources, one destination">
-    <RegisterFile bind:this={regFile} instanceId="regfile-nor" registers={['$a0', '$a1', '$v0']} steps={norSteps} />
+  <Figure caption="NOR execution trace — code panel + registers synchronized step-by-step">
+    <ExecutionTracer
+      instanceId="tracer-nor"
+      code={norCode}
+      registers={['$a0', '$a1', '$v0']}
+      steps={norSteps}
+      title="NOR Subprogram"
+    />
   </Figure>
 
   <div class="prose">

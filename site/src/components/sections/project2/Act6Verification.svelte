@@ -8,7 +8,27 @@
   let hydrated = $state(false);
   $effect(() => { hydrated = true; });
 
+  let revealExit = $state(false);
+  let revealPrintInt = $state(false);
   let revealReflection = $state(false);
+
+  const exitLines: Line[] = [
+    { kind: 'visible', code: 'Exit:' },
+    { kind: 'visible', code: '    li $v0, 10    # Service 10 = terminate' },
+    { kind: 'visible', code: '    syscall' },
+  ];
+
+  const printIntLines: Line[] = [
+    { kind: 'visible', code: 'PrintInt:' },
+    { kind: 'visible', code: '    # Prints: label string ($a0), then integer value ($a1)' },
+    { kind: 'visible', code: '    move  $t0, $a1       # Save the integer' },
+    { kind: 'visible', code: '    li    $v0, 4          # Service 4: print string' },
+    { kind: 'visible', code: '    syscall               # Print the label' },
+    { kind: 'visible', code: '    move  $a0, $t0        # Put integer back in $a0' },
+    { kind: 'visible', code: '    li    $v0, 1          # Service 1: print integer' },
+    { kind: 'visible', code: '    syscall               # Print the integer' },
+    { kind: 'visible', code: '    jr    $ra' },
+  ];
 
   const testHarnessLines: Line[] = [
     { kind: 'visible', code: '# File:    main.asm' },
@@ -105,6 +125,44 @@
       and check register values at each <code>jr $ra</code>. This test harness calls
       subprograms from within <code>main</code>, which itself is the entry point —
       so <code>$ra</code> is never at risk of being overwritten.
+    </div>
+
+    <h3>Peek Inside the Utility Subprograms</h3>
+
+    <p>
+      The test harness calls <code>PrintInt</code>, <code>PrintNewLine</code>, and
+      <code>Exit</code> — subprograms already provided in <code>utils.asm</code>.
+      Curious how they work?
+    </p>
+
+    <p>
+      <button class="action" onclick={() => revealExit = true} disabled={!hydrated}>Peek inside Exit</button>
+    </p>
+    <div class="reveal" data-open={revealExit}>
+      <div class="reveal-inner">
+        <Figure caption="The Exit subprogram">
+          <MipsEditor instanceId="mips-peek-exit" lines={exitLines} title="Exit" />
+        </Figure>
+        <p>
+          Just two instructions — load the exit service number and call the OS.
+        </p>
+      </div>
+    </div>
+
+    <p>
+      <button class="action" onclick={() => revealPrintInt = true} disabled={!hydrated}>Peek inside PrintInt</button>
+    </p>
+    <div class="reveal" data-open={revealPrintInt}>
+      <div class="reveal-inner">
+        <Figure caption="The PrintInt subprogram">
+          <MipsEditor instanceId="mips-peek-printint" lines={printIntLines} title="PrintInt" />
+        </Figure>
+        <p>
+          PrintInt does two syscalls — one to print the label string, one to print the
+          integer. It uses <code>$t0</code> as a temporary to hold the integer while
+          printing the label.
+        </p>
+      </div>
     </div>
 
     <h3>Final Reflection</h3>

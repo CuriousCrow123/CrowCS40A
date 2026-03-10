@@ -15,7 +15,14 @@ const KEYWORDS = new Set([
   'j', 'neg', 'rem', 'lbu', 'lhu',
 ]);
 
+// Module-level memoization cache — common lines like `jr $ra`, `.text` appear
+// across many ExecutionTracer instances, so cache hits are frequent.
+const tokenCache = new Map<string, MipsToken[]>();
+
 export function tokenizeMipsLine(code: string): MipsToken[] {
+  const cached = tokenCache.get(code);
+  if (cached) return cached;
+
   const tokens: MipsToken[] = [];
   let remaining = code;
 
@@ -81,5 +88,6 @@ export function tokenizeMipsLine(code: string): MipsToken[] {
     remaining = remaining.slice(1);
   }
 
+  tokenCache.set(code, tokens);
   return tokens;
 }

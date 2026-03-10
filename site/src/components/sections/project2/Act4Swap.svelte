@@ -3,12 +3,11 @@
   import MipsEditor from '../../widgets/MipsEditor.svelte';
   import TruthTable from '../../widgets/TruthTable.svelte';
   import BitOperator from '../../widgets/BitOperator.svelte';
-  import RegisterFile from '../../widgets/RegisterFile.svelte';
+  import ExecutionTracer from '../../widgets/ExecutionTracer.svelte';
   import type { Line, Column, Step } from '../../../lib/types';
 
   let truthTable = $state<ReturnType<typeof TruthTable>>();
   let bitOp = $state<ReturnType<typeof BitOperator>>();
-  let regFile = $state<ReturnType<typeof RegisterFile>>();
   let codeEditor = $state<ReturnType<typeof MipsEditor>>();
 
   let hydrated = $state(false);
@@ -28,13 +27,30 @@
     { header: 'A XOR B', values: [0, 1, 1, 0] },
   ];
 
+  const swapCode = [
+    '.text',
+    'Swap:',
+    '# Subprogram:   Swap',
+    '# Author:       [student name]',
+    '# Purpose:      Swaps two values using XOR and MOVE',
+    '# Input:        $a0 = first value, $a1 = second value',
+    '# Output:       $v0 = original $a1, $v1 = original $a0',
+    '# Side effects: $a0 and $a1 are modified',
+    '    xor   $a0, $a0, $a1',
+    '    xor   $a1, $a0, $a1',
+    '    xor   $a0, $a0, $a1',
+    '    move  $v0, $a0',
+    '    move  $v1, $a1',
+    '    jr    $ra',
+  ];
+
   const swapSteps: Step[] = [
-    { instruction: 'Initial', registers: { '$a0': 'A', '$a1': 'B', '$v0': '?', '$v1': '?' }, annotation: 'Starting values: $a0 = A, $a1 = B' },
-    { instruction: 'xor $a0, $a0, $a1', registers: { '$a0': 'A XOR B', '$a1': 'B', '$v0': '?', '$v1': '?' }, reading: ['$a0', '$a1'], changed: ['$a0'], annotation: '$a0 now holds A XOR B — the original A is "encoded" with B' },
-    { instruction: 'xor $a1, $a0, $a1', registers: { '$a0': 'A XOR B', '$a1': 'A', '$v0': '?', '$v1': '?' }, reading: ['$a0', '$a1'], changed: ['$a1'], annotation: 'Self-inverse: (A XOR B) XOR B = A — original A recovered in $a1!' },
-    { instruction: 'xor $a0, $a0, $a1', registers: { '$a0': 'B', '$a1': 'A', '$v0': '?', '$v1': '?' }, reading: ['$a0', '$a1'], changed: ['$a0'], annotation: 'Self-inverse: (A XOR B) XOR A = B — original B now in $a0' },
-    { instruction: 'move $v0, $a0', registers: { '$a0': 'B', '$a1': 'A', '$v0': 'B', '$v1': '?' }, reading: ['$a0'], changed: ['$v0'], annotation: '$v0 = B (original $a1) — first output register set' },
-    { instruction: 'move $v1, $a1', registers: { '$a0': 'B', '$a1': 'A', '$v0': 'B', '$v1': 'A' }, reading: ['$a1'], changed: ['$v1'], annotation: 'Swap complete! $v0 = B, $v1 = A — both outputs set' },
+    { instruction: 'Initial', line: 0, registers: { '$a0': 'A', '$a1': 'B', '$v0': '?', '$v1': '?' }, annotation: 'Starting values: $a0 = A, $a1 = B' },
+    { instruction: 'xor $a0, $a0, $a1', line: 8, registers: { '$a0': 'A XOR B', '$a1': 'B', '$v0': '?', '$v1': '?' }, reading: ['$a0', '$a1'], changed: ['$a0'], annotation: '$a0 now holds A XOR B — the original A is "encoded" with B' },
+    { instruction: 'xor $a1, $a0, $a1', line: 9, registers: { '$a0': 'A XOR B', '$a1': 'A', '$v0': '?', '$v1': '?' }, reading: ['$a0', '$a1'], changed: ['$a1'], annotation: 'Self-inverse: (A XOR B) XOR B = A — original A recovered in $a1!' },
+    { instruction: 'xor $a0, $a0, $a1', line: 10, registers: { '$a0': 'B', '$a1': 'A', '$v0': '?', '$v1': '?' }, reading: ['$a0', '$a1'], changed: ['$a0'], annotation: 'Self-inverse: (A XOR B) XOR A = B — original B now in $a0' },
+    { instruction: 'move $v0, $a0', line: 11, registers: { '$a0': 'B', '$a1': 'A', '$v0': 'B', '$v1': '?' }, reading: ['$a0'], changed: ['$v0'], annotation: '$v0 = B (original $a1) — first output register set' },
+    { instruction: 'move $v1, $a1', line: 12, registers: { '$a0': 'B', '$a1': 'A', '$v0': 'B', '$v1': 'A' }, reading: ['$a1'], changed: ['$v1'], annotation: 'Swap complete! $v0 = B, $v1 = A — both outputs set' },
   ];
 
   const swapLines: Line[] = [
@@ -135,15 +151,18 @@
     <h3>The Swap Algorithm Trace</h3>
 
     <p>
-      Use
-      <button class="action" onclick={() => regFile?.step()} disabled={!regFile}>Next step</button> and
-      <button class="action" onclick={() => regFile?.stepBack()} disabled={!regFile}>Previous step</button>
-      to walk through the XOR swap. Watch how the self-inverse property makes each step work.
+      Step through the XOR swap. Watch how the self-inverse property makes each step work.
     </p>
   </div>
 
   <Figure caption="XOR swap trace — 3 XOR operations + 2 MOVEs">
-    <RegisterFile bind:this={regFile} instanceId="regfile-swap" registers={['$a0', '$a1', '$v0', '$v1']} steps={swapSteps} />
+    <ExecutionTracer
+      instanceId="tracer-swap"
+      code={swapCode}
+      registers={['$a0', '$a1', '$v0', '$v1']}
+      steps={swapSteps}
+      title="Swap Subprogram"
+    />
   </Figure>
 
   <div class="prose">

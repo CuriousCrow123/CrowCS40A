@@ -23,12 +23,17 @@ export type BinaryBitOp = 'NOR' | 'NAND' | 'AND' | 'OR' | 'XOR';
 export type UnaryBitOp = 'NOT';
 export type BitOperation = BinaryBitOp | UnaryBitOp;
 
+// Display register — extends MipsRegister with special registers for tracer
+export type DisplayRegister = MipsRegister | '$pc';
+
 // RegisterFile step — typed register keys
-export type RegisterState = Partial<Record<MipsRegister, string>>;
+export type RegisterState = Partial<Record<DisplayRegister, string>>;
 export type Step = {
   instruction: string;
   registers: RegisterState;
-  changed?: MipsRegister[];
-  reading?: MipsRegister[];
+  changed?: DisplayRegister[];
+  reading?: DisplayRegister[];
   annotation?: string;
+  /** 0-indexed line to highlight in a paired code panel (used by ExecutionTracer) */
+  line?: number;
 };

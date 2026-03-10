@@ -1,11 +1,10 @@
 <script lang="ts">
   import Figure from '../../essay/Figure.svelte';
   import MipsEditor from '../../widgets/MipsEditor.svelte';
-  import RegisterFile from '../../widgets/RegisterFile.svelte';
+  import ExecutionTracer from '../../widgets/ExecutionTracer.svelte';
   import type { Line, Step } from '../../../lib/types';
 
   let editor = $state<ReturnType<typeof MipsEditor>>();
-  let scaffoldTrace = $state<ReturnType<typeof RegisterFile>>();
 
   let hydrated = $state(false);
   $effect(() => { hydrated = true; });
@@ -13,11 +12,22 @@
   let revealOpen1 = $state(false);
   let revealOpen2 = $state(false);
 
+  const callReturnCode = [
+    'main:',
+    '    li    $a0, 0xF0F0F0F0',
+    '    li    $a1, 0x0F0F0F0F',
+    '    jal   NOR',
+    '    move  $t0, $v0',
+    'NOR:',
+    '    nor   $v0, $a0, $a1',
+    '    jr    $ra',
+  ];
+
   const callReturnSteps: Step[] = [
-    { instruction: 'Before jal NOR', registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?', '$ra': '?' }, annotation: 'Caller has loaded arguments — ready to call subprogram' },
-    { instruction: 'jal NOR', registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?', '$ra': '0x00400028' }, changed: ['$ra'], annotation: 'jal saves the return address in $ra automatically' },
-    { instruction: '(inside NOR body)', registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000', '$ra': '0x00400028' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'Subprogram reads inputs, writes result to $v0' },
-    { instruction: 'jr $ra', registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000', '$ra': '0x00400028' }, reading: ['$ra'], annotation: 'jr reads $ra to jump back to the caller' },
+    { instruction: 'Before jal NOR', line: 0, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?', '$ra': '?' }, annotation: 'Caller has loaded arguments — ready to call subprogram' },
+    { instruction: 'jal NOR', line: 3, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?', '$ra': '0x00400010' }, changed: ['$ra'], annotation: 'jal saves the next instruction\'s address in $ra, then jumps to NOR' },
+    { instruction: 'nor $v0, $a0, $a1', line: 6, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000', '$ra': '0x00400010' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'Inside NOR: reads $a0 and $a1, writes result to $v0' },
+    { instruction: 'jr $ra', line: 7, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000', '$ra': '0x00400010' }, reading: ['$ra'], annotation: 'jr copies $ra into $pc — execution jumps back to the caller' },
   ];
 
   const scaffoldLines: Line[] = [
@@ -92,17 +102,21 @@
   <div class="prose">
     <h3>The Call/Return Dance</h3>
     <p>
-      What actually happens in the registers when you call a subprogram? Step through to see:
-    </p>
-    <p>
-      <button class="action" onclick={() => scaffoldTrace?.step()} disabled={!scaffoldTrace}>Next step</button>
-      <button class="action" onclick={() => scaffoldTrace?.stepBack()} disabled={!scaffoldTrace}>Previous step</button>
-      <button class="action" onclick={() => scaffoldTrace?.reset()} disabled={!scaffoldTrace}>Reset</button>
+      What actually happens when you call a subprogram? <code>jal</code> (jump and link) saves
+      the return address in <code>$ra</code> and jumps. <code>jr $ra</code> jumps back.
+      Step through the trace to see it in action:
     </p>
   </div>
 
-  <Figure caption="Register trace: what jal and jr $ra do to the register file">
-    <RegisterFile bind:this={scaffoldTrace} instanceId="regfile-scaffold" registers={['$a0', '$a1', '$v0', '$ra']} steps={callReturnSteps} />
+  <Figure caption="The call/return dance — jal saves the address, jr $ra jumps back">
+    <ExecutionTracer
+      instanceId="tracer-call-return"
+      code={callReturnCode}
+      registers={['$a0', '$a1', '$v0', '$ra']}
+      steps={callReturnSteps}
+      title="Call / Return Dance"
+      addresses={['0x00400000', '0x00400004', '0x00400008', '0x0040000C', '0x00400010', '0x00400014', '0x00400018', '0x0040001C']}
+    />
   </Figure>
 
   <div class="prose">

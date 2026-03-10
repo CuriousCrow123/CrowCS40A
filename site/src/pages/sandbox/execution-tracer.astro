@@ -1,0 +1,67 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ExecutionTracer from '../../components/widgets/ExecutionTracer.svelte';
+---
+
+<BaseLayout title="Sandbox: Execution Tracer">
+  <main style="padding: var(--space-2xl); max-width: var(--figure-width); margin-inline: auto;">
+    <a href="/sandbox" style="color: var(--color-accent);">&larr; All widgets</a>
+    <h1 style="margin-block: var(--space-lg); font-size: 1.75rem;">Execution Tracer</h1>
+    <p style="color: var(--color-text-muted); margin-bottom: var(--space-xl);">
+      Code panel + register table side-by-side with synchronized stepping.
+    </p>
+    <div style="background: var(--color-bg-raised); padding: var(--space-xl); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+      <ExecutionTracer
+        client:load
+        instanceId="sandbox-tracer"
+        title="NOR Subprogram"
+        code={[
+          '.text',
+          'NOR:',
+          '# Subprogram:   NOR',
+          '# Author:       [student name]',
+          '# Purpose:      Performs bitwise NOR on two values',
+          '# Input:        $a0 = first value, $a1 = second value',
+          '# Output:       $v0 = $a0 NOR $a1',
+          '# Side effects: none',
+          '    nor   $v0, $a0, $a1',
+          '    jr    $ra',
+        ]}
+        registers={['$a0', '$a1', '$v0']}
+        steps={[
+          { instruction: 'Initial state', line: 0, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '?' }, annotation: 'Caller loaded arguments into $a0 and $a1' },
+          { instruction: 'nor $v0, $a0, $a1', line: 8, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'Read $a0 and $a1 → NOR all 32 bits → write result to $v0' },
+          { instruction: 'jr $ra', line: 9, registers: { '$a0': '0xF0F0F0F0', '$a1': '0x0F0F0F0F', '$v0': '0x00000000' }, annotation: 'Return to caller — result is in $v0' },
+        ]}
+      />
+    </div>
+
+    <h2 style="margin-block: var(--space-xl) var(--space-lg); font-size: 1.25rem;">With Address Annotations</h2>
+    <div style="background: var(--color-bg-raised); padding: var(--space-xl); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+      <ExecutionTracer
+        client:load
+        instanceId="sandbox-tracer-addr"
+        title="Call / Return Dance"
+        code={[
+          'main:',
+          '    li    $a0, 10',
+          '    li    $a1, 20',
+          '    jal   NOR',
+          '    move  $t0, $v0',
+          'NOR:',
+          '    nor   $v0, $a0, $a1',
+          '    jr    $ra',
+        ]}
+        addresses={['0x00400000', '0x00400004', '0x00400008', '0x0040000C', '0x00400010', '0x00400014', '0x00400018', '0x0040001C']}
+        registers={['$a0', '$a1', '$v0', '$ra', '$pc']}
+        steps={[
+          { instruction: 'li $a0, 10', line: 1, registers: { '$a0': '10', '$a1': '?', '$v0': '?', '$ra': '?', '$pc': '0x00400004' }, changed: ['$a0'], annotation: 'Load 10 into $a0' },
+          { instruction: 'li $a1, 20', line: 2, registers: { '$a0': '10', '$a1': '20', '$v0': '?', '$ra': '?', '$pc': '0x00400008' }, changed: ['$a1'], annotation: 'Load 20 into $a1' },
+          { instruction: 'jal NOR', line: 3, registers: { '$a0': '10', '$a1': '20', '$v0': '?', '$ra': '0x00400010', '$pc': '0x00400018' }, changed: ['$ra', '$pc'], annotation: 'jal saves next address (0x00400010) in $ra, jumps to NOR' },
+          { instruction: 'nor $v0, $a0, $a1', line: 6, registers: { '$a0': '10', '$a1': '20', '$v0': '0xFFFFFFE5', '$ra': '0x00400010', '$pc': '0x0040001C' }, reading: ['$a0', '$a1'], changed: ['$v0'], annotation: 'NOR: 10 NOR 20 = 0xFFFFFFE5' },
+          { instruction: 'jr $ra', line: 7, registers: { '$a0': '10', '$a1': '20', '$v0': '0xFFFFFFE5', '$ra': '0x00400010', '$pc': '0x00400010' }, reading: ['$ra'], changed: ['$pc'], annotation: 'jr copies $ra into $pc — back to instruction after jal' },
+        ]}
+      />
+    </div>
+  </main>
+</BaseLayout>
