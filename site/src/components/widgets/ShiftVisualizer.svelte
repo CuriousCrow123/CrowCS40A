@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Param } from '../../lib/params';
   import { loadParams, saveParams } from '../../lib/params';
-  import { createReducedMotion } from '../../lib/motion';
+  import { createReducedMotion } from '../../lib/motion.svelte';
   import WidgetDebugPanel from '../debug/WidgetDebugPanel.svelte';
 
   const paramDefs: Param[] = [

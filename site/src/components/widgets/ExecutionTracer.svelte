@@ -5,6 +5,19 @@
   import { tokenizeMipsLine } from '../../lib/mips-tokenizer';
   import WidgetDebugPanel from '../debug/WidgetDebugPanel.svelte';
 
+  /** Registers that hold memory addresses (not data values like $a0, $v0). */
+  const ADDRESS_REGISTERS: ReadonlySet<DisplayRegister> = new Set(['$pc', '$ra']);
+
+  /** Regex matching full MIPS hex addresses; negative lookahead prevents partial matches. */
+  const HEX_ADDR_RE = /0x[0-9a-fA-F]{8}(?![0-9a-fA-F])/g;
+
+  /** Truncate a hex address to last 4 digits, keeping 0x prefix.
+   *  Non-hex inputs pass through unchanged. */
+  function formatAddr(hex: string, simple: boolean): string {
+    if (!simple || !hex || !hex.startsWith('0x')) return hex;
+    return '0x' + hex.slice(-4);
+  }
+
   const paramDefs: Param[] = [
     { name: 'fontSize',      value: 0.875, unit: 'rem', category: 'style', min: 0.7, max: 1.3, step: 0.05, description: 'Register value font size' },
     { name: 'labelSize',     value: 0.75,  unit: 'rem', category: 'style', min: 0.6, max: 1,   step: 0.05, description: 'Register name font size' },
@@ -12,16 +25,18 @@
     { name: 'gap',           value: 0.5,   unit: 'rem', category: 'style', min: 0,   max: 1.5, step: 0.125, description: 'Gap between register cells' },
     { name: 'borderRadius',  value: 6,     unit: 'px',  category: 'style', min: 0,   max: 12,  step: 1,    description: 'Cell corner rounding' },
     { name: 'codeFontSize',  value: 0.85,  unit: 'rem', category: 'style', min: 0.7, max: 1.2, step: 0.05, description: 'Code panel font size' },
-    { name: 'codeLineHeight',value: 1.6,   unit: '',    category: 'style', min: 1.2, max: 2.2, step: 0.1,  description: 'Code panel line height' },
+    { name: 'codeLineHeight',value: 1.35,  unit: '',    category: 'style', min: 1.2, max: 2.2, step: 0.05, description: 'Code panel line height' },
   ];
 
-  let { instanceId, code, registers, steps, title, addresses }: {
+  let { instanceId, code, registers, steps, title, addresses, addressRegisterOverrides = {} }: {
     instanceId: string;
     code: string[];
     registers: DisplayRegister[];
     steps: Step[];
     title?: string;
     addresses?: string[];
+    /** Per-step overrides: which registers hold addresses (default: $pc, $ra). */
+    addressRegisterOverrides?: Record<number, DisplayRegister[]>;
   } = $props();
 
   let params = $state(loadParams(instanceId, paramDefs));
@@ -29,6 +44,8 @@
 
   let currentStep = $state(0);
   let flashGeneration = $state(0);
+  // Not in paramDefs — boolean toggle; paramDefs is numeric-only
+  let simpleAddresses = $state(false);
 
   let current = $derived(steps[currentStep]);
   let changedSet = $derived(new Set(current?.changed ?? []));
@@ -37,6 +54,17 @@
   let isFirst = $derived(currentStep === 0);
   let isLast = $derived(currentStep === totalSteps - 1);
   let currentLine = $derived(current?.line);
+
+  // Per-step address register classification (cached for current step)
+  let currentAddrRegs = $derived<ReadonlySet<DisplayRegister>>(
+    addressRegisterOverrides[currentStep]
+      ? new Set(addressRegisterOverrides[currentStep])
+      : ADDRESS_REGISTERS
+  );
+
+  function isAddressReg(reg: DisplayRegister): boolean {
+    return currentAddrRegs.has(reg);
+  }
 
   // Track executed lines for dimming (handles non-linear jal/jr jumps)
   let executedLines = $derived.by(() => {
@@ -51,7 +79,12 @@
   // Tokenize code lines (memoized at tokenizer level)
   let tokenized = $derived(code.map(line => tokenizeMipsLine(line)));
 
-  // A11y announcement
+  // Format a register value for display — only truncate address registers
+  function displayRegValue(reg: DisplayRegister, raw: string): string {
+    return isAddressReg(reg) ? formatAddr(raw, simpleAddresses) : raw;
+  }
+
+  // A11y announcement (uses formatted values for parity with visual output)
   let changeAnnouncement = $derived.by(() => {
     const parts: string[] = [];
     if (currentLine !== undefined) {
@@ -59,14 +92,33 @@
     }
     const reading = current?.reading;
     if (reading && reading.length > 0) {
-      parts.push('Reading ' + reading.map(r => `${r} (${current.registers[r] ?? '?'})`).join(', '));
+      parts.push('Reading ' + reading.map(r => `${r} (${displayRegValue(r, current.registers[r] ?? '?')})`).join(', '));
     }
     const changed = current?.changed;
     if (changed && changed.length > 0) {
-      parts.push(changed.map(r => `${r} changed to ${current.registers[r] ?? '?'}`).join('. '));
+      parts.push(changed.map(r => `${r} changed to ${displayRegValue(r, current.registers[r] ?? '?')}`).join('. '));
     }
     return parts.join('. ');
   });
+
+  // Annotation tokenizer — splits text into plain/address segments for .hex-addr styling
+  type AnnotationToken = { type: 'text' | 'addr'; value: string };
+
+  function tokenizeAnnotation(text: string, simple: boolean): AnnotationToken[] {
+    const tokens: AnnotationToken[] = [];
+    let lastIndex = 0;
+    for (const match of text.matchAll(HEX_ADDR_RE)) {
+      if (match.index! > lastIndex) {
+        tokens.push({ type: 'text', value: text.slice(lastIndex, match.index!) });
+      }
+      tokens.push({ type: 'addr', value: formatAddr(match[0], simple) });
+      lastIndex = match.index! + match[0].length;
+    }
+    if (lastIndex < text.length) {
+      tokens.push({ type: 'text', value: text.slice(lastIndex) });
+    }
+    return tokens;
+  }
 
   // Dev-mode validation
   if (import.meta.env.DEV) {
@@ -106,12 +158,17 @@
     flashGeneration++;
   }
 
+  function toggleAddressMode() {
+    simpleAddresses = !simpleAddresses;
+  }
+
   function handleKeyboard(e: KeyboardEvent) {
     switch (e.key) {
       case 'ArrowRight': case 'n': e.preventDefault(); step(); break;
       case 'ArrowLeft': case 'p': e.preventDefault(); stepBack(); break;
       case 'Home': e.preventDefault(); reset(); break;
       case 'End': e.preventDefault(); goToStep(totalSteps - 1); break;
+      case 'a': e.preventDefault(); toggleAddressMode(); break;
     }
   }
 </script>
@@ -138,30 +195,15 @@
     {#if title}
       <div class="code-title">{title}</div>
     {/if}
-    <pre class="code-lines" role="region" aria-label="Assembly code">
-      {#each tokenized as lineTokens, i}
-        {@const isCurrent = currentLine === i}
-        {@const isExecuted = executedLines.has(i)}
-        <div
-          class="code-line"
-          class:current={isCurrent}
-          class:executed={isExecuted && !isCurrent}
-        >
-          {#if addresses?.[i]}
-            <span class="line-addr">{addresses[i]}</span>
-          {/if}
-          <span class="line-num">{i + 1}</span>
-          <span class="line-code">{#each lineTokens as token}<span class={token.type}>{token.text}</span>{/each}</span>
-        </div>
-      {/each}
-    </pre>
+    <div class="code-lines" role="region" aria-label="Assembly code">{#each tokenized as lineTokens, i}{@const isCurrent = currentLine === i}{@const isExecuted = executedLines.has(i)}<div class="code-line" class:current={isCurrent} class:executed={isExecuted && !isCurrent}>{#if addresses?.[i]}<button class="line-addr" aria-pressed={simpleAddresses} onclick={toggleAddressMode}>{formatAddr(addresses[i], simpleAddresses)}</button>{:else if addresses}<span class="line-addr-spacer"></span>{/if}<span class="line-num">{i + 1}</span><span class="line-code">{#each lineTokens as token}<span class={token.type}>{token.text}</span>{/each}</span></div>{/each}</div>
   </div>
 
   <!-- Register Panel -->
   <div class="register-panel">
     <div class="register-row">
       {#each registers as reg (reg)}
-        {@const value = current.registers[reg] ?? '?'}
+        {@const raw = current.registers[reg] ?? '?'}
+        {@const value = displayRegValue(reg, raw)}
         {@const changed = changedSet.has(reg)}
         <div
           class="register-card"
@@ -178,14 +220,16 @@
           {:else if changed}
             <span class="reg-role writing-role" aria-hidden="true">dest</span>
           {/if}
-          <span class="reg-value">{value}</span>
+          <span class="reg-value" class:hex-addr={isAddressReg(reg)}>{value}</span>
         </div>
       {/each}
     </div>
 
-    <!-- Annotation -->
+    <!-- Annotation — hex addresses tokenized for .hex-addr styling. Never use {@html} here. -->
     {#if current.annotation}
-      <p class="annotation">{current.annotation}</p>
+      <p class="annotation">
+        {#each tokenizeAnnotation(current.annotation, simpleAddresses) as token}{#if token.type === 'addr'}<span class="hex-addr">{token.value}</span>{:else}{token.value}{/if}{/each}
+      </p>
     {/if}
   </div>
 
@@ -314,13 +358,36 @@
     opacity: 0.45;
   }
 
-  .line-addr {
+  button.line-addr {
+    all: unset;
     display: inline-block;
     min-width: 6.5rem;
     color: var(--color-text-muted, #888);
     opacity: 0.6;
     user-select: none;
     font-size: 0.75em;
+    font-family: inherit;
+    cursor: pointer;
+    transition: opacity var(--transition-fast, 150ms);
+  }
+
+  button.line-addr:hover {
+    opacity: 1;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+    color: var(--color-accent, #4d9fff);
+  }
+
+  button.line-addr:focus-visible {
+    outline: 2px solid var(--color-accent, #4d9fff);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .line-addr-spacer {
+    display: inline-block;
+    min-width: 6.5rem;
   }
 
   .line-num {
@@ -450,6 +517,7 @@
       animation: none;
     }
     .code-line { transition: none; }
+    button.line-addr { transition: none; }
   }
 
   .annotation {

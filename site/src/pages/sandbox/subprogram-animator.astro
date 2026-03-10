@@ -1,0 +1,60 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SubprogramAnimator from '../../components/widgets/SubprogramAnimator.svelte';
+---
+
+<BaseLayout title="Sandbox: Subprogram Animator">
+  <main style="padding: var(--space-2xl); max-width: var(--figure-width); margin-inline: auto;">
+    <a href="/sandbox" style="color: var(--color-accent);">&larr; All widgets</a>
+    <h1 style="margin-block: var(--space-lg); font-size: 1.75rem;">Subprogram Animator</h1>
+    <p style="color: var(--color-text-muted); margin-bottom: var(--space-xl);">
+      Animated register-level subprogram visualizer showing inputs, operation, and outputs.
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: var(--space-xl);">
+      <div style="background: var(--color-bg-raised); padding: var(--space-xl); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+        <h2 style="font-size: 1.25rem; margin-bottom: var(--space-md);">NOR</h2>
+        <SubprogramAnimator
+          client:load
+          instanceId="sandbox-subprog-nor"
+          inputs={[{register:'$a0',value:'0xF0F0F0F0'},{register:'$a1',value:'0x0F0F0F0F'}]}
+          outputs={[{register:'$v0',value:'0x00000000'}]}
+          operation="NOR"
+        />
+      </div>
+
+      <div style="background: var(--color-bg-raised); padding: var(--space-xl); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+        <h2 style="font-size: 1.25rem; margin-bottom: var(--space-md);">NAND</h2>
+        <SubprogramAnimator
+          client:load
+          instanceId="sandbox-subprog-nand"
+          inputs={[{register:'$a0',value:'0xFF00FF00'},{register:'$a1',value:'0xFFFF0000'}]}
+          outputs={[{register:'$v0',value:'0x00FFFFFF'}]}
+          operation="NAND"
+        />
+      </div>
+
+      <div style="background: var(--color-bg-raised); padding: var(--space-xl); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+        <h2 style="font-size: 1.25rem; margin-bottom: var(--space-md);">SLL (Mult4)</h2>
+        <SubprogramAnimator
+          client:load
+          instanceId="sandbox-subprog-sll"
+          inputs={[{register:'$a0',value:'7'}]}
+          outputs={[{register:'$v0',value:'28'}]}
+          operation="SLL"
+        />
+      </div>
+
+      <div style="background: var(--color-bg-raised); padding: var(--space-xl); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+        <h2 style="font-size: 1.25rem; margin-bottom: var(--space-md);">XOR Swap</h2>
+        <SubprogramAnimator
+          client:load
+          instanceId="sandbox-subprog-swap"
+          inputs={[{register:'$a0',value:'42'},{register:'$a1',value:'99'}]}
+          outputs={[{register:'$v0',value:'99'},{register:'$v1',value:'42'}]}
+          operation="XOR Swap"
+        />
+      </div>
+    </div>
+  </main>
+</BaseLayout>

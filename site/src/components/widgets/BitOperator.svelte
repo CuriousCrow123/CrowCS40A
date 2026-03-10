@@ -2,7 +2,7 @@
   import type { Param } from '../../lib/params';
   import type { BinaryBitOp } from '../../lib/types';
   import { loadParams, saveParams } from '../../lib/params';
-  import { createReducedMotion } from '../../lib/motion';
+  import { createReducedMotion } from '../../lib/motion.svelte';
   import WidgetDebugPanel from '../debug/WidgetDebugPanel.svelte';
 
   const paramDefs: Param[] = [

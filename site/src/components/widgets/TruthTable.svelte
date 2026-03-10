@@ -8,7 +8,7 @@
   const WIDGET_ID = 'truth-table';
 
   const paramDefs: Param[] = [
-    { name: 'cellSize',     value: 2.5,  unit: 'rem', category: 'style', min: 1.5, max: 4,   step: 0.25, description: 'Cell width/height' },
+    { name: 'cellSize',     value: 3.5,  unit: 'rem', category: 'style', min: 1.5, max: 5,   step: 0.25, description: 'Cell width/height' },
     { name: 'fontSize',     value: 0.9,  unit: 'rem', category: 'style', min: 0.7, max: 1.4, step: 0.05, description: 'Table font size' },
     { name: 'headerSize',   value: 0.75, unit: 'rem', category: 'style', min: 0.6, max: 1.2, step: 0.05, description: 'Header font size' },
     { name: 'borderRadius', value: 6,    unit: 'px',  category: 'style', min: 0,   max: 12,  step: 1,    description: 'Table corner rounding' },
@@ -120,7 +120,7 @@
     <thead>
       <tr>
         {#each columns as col, i}
-          <th scope="col" class:result-col={revealColumns?.includes(i)}>
+          <th scope="col" class:result-col={revealColumns?.includes(i)} class:wide-col={i >= columns.length - 2}>
             {col.header}
           </th>
         {/each}
@@ -137,6 +137,7 @@
               class:revealed={revealColumns?.includes(colIdx) && !hiddenSet.has(colIdx)}
               class:zero={col.values[row] === 0 && !hiddenSet.has(colIdx)}
               class:one={col.values[row] === 1 && !hiddenSet.has(colIdx)}
+              class:wide-col={colIdx >= columns.length - 2}
             >
               {#if hiddenSet.has(colIdx)}
                 <span class="placeholder" aria-label="Hidden value">?</span>
@@ -156,7 +157,8 @@
 <style>
   .truth-table-root {
     position: relative;
-    display: inline-block;
+    display: flex;
+    justify-content: center;
   }
 
   .sr-only {
@@ -204,6 +206,10 @@
 
   th.result-col {
     color: var(--color-accent);
+  }
+
+  :is(th, td).wide-col {
+    min-width: calc(var(--tt-cell-size) * 1.6);
   }
 
   td {

@@ -109,16 +109,16 @@
         class="register-card"
         class:changed
         class:reading={readingSet.has(reg)}
-        class:read-write={changed && readingSet.has(reg)}
+        aria-label="{reg}: {value}"
         data-flash={changed ? flashGeneration : undefined}
       >
         <span class="reg-name">{reg}</span>
         {#if changed && readingSet.has(reg)}
-          <span class="reg-role read-write-role">read &rarr; write</span>
+          <span class="reg-role read-write-role" aria-hidden="true">read &rarr; write</span>
         {:else if readingSet.has(reg)}
-          <span class="reg-role reading-role">source</span>
+          <span class="reg-role reading-role" aria-hidden="true">source</span>
         {:else if changed}
-          <span class="reg-role writing-role">dest</span>
+          <span class="reg-role writing-role" aria-hidden="true">dest</span>
         {/if}
         <span class="reg-value">{value}</span>
       </div>
@@ -246,7 +246,8 @@
   }
 
   /* Combined read + write — register is both source and destination */
-  .register-card.read-write {
+  /* Double-class selector for natural specificity over .changed and .reading alone */
+  .register-card.changed.reading {
     border-color: var(--color-accent, #7c9cff);
     background: color-mix(in srgb, var(--color-accent, #7c9cff) 15%, var(--color-bg-surface, #1a1a2e));
     animation: flash-readwrite 400ms ease-out;
@@ -299,7 +300,8 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .register-card.read-write {
+    .register-card.changed,
+    .register-card.changed.reading {
       animation: none;
     }
   }
