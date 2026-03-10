@@ -1,0 +1,28 @@
+In Ch 5 you learned how to create a separate file that contains subprograms that can be called from another program.  In the text, this file is called utils.asm and is included here:  utils.asmDownload utils.asm
+
+ 
+
+In this Project, we will add a few more helpful subprograms to the end of this file.
+
+NOR - take two input parameters and return the NOR operation on those two parameters
+NAND - take two input parameters and return the NAND operation on those two parameters
+Mult4 - take an input parameter and return that parameter multiplied by 4 using only the shift operation.
+Swap - take two input parameters and swap them using only the XOR and MOVE operations.
+First swap the two argument registers ($a0 and $a1) using only a series of XOR operations
+Then, move their values into the return registers ($a0 -> $v0 and $a1 -> $v1)
+The result should be that the original $a0 register is returned in $v1 and the original $a1 is returned in $v0.
+ 
+
+Notes:  assume your subprograms already have arguments in the 'a' register(s) ($a0...$a3) and should store output(s) in the 'v' register(s) ($v0, $v1).
+
+Notes:  no need to get user input or print output values, other subprograms in utils.asm can be used to do that.
+
+Notes:  don't 'exit' at the end of your subprogram, you need to return to the calling program using a jump operation
+
+SUBMIT:
+
+Add your subprograms to the end of the utils.asm file provided above.
+
+Ensure you add comments similar to the comments included in the utils.asm file and that you update the comments at the top of the file to include your subprograms in the index.
+
+1) an updated utils.asm file (add your name to the Author comment at the top of the file)
